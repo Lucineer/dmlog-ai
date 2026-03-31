@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DMLog.ai -- The Realm Awaits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ========== RESET & BASE ========== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-void: #0a0a0a;
+      --bg-panel: #1a1a1a;
+      --bg-panel-raised: #222222;
+      --bg-narrative: #1c1a16;
+      --bg-parchment: #2a261e;
+      --gold: #c9a23c;
+      --gold-light: #e0c068;
+      --gold-dim: #8a6f2a;
+      --gold-glow: rgba(201, 162, 60, 0.3);
+      --text-primary: #e8e0d0;
+      --text-secondary: #a09888;
+      --text-dim: #706858;
+      --text-dm: #f0d878;
+      --hp-green: #4caf50;
+      --hp-yellow: #ff9800;
+      --hp-red: #f44336;
+      --hp-bg: #2a1a1a;
+      --accent-blue: #4a90d9;
+      --accent-purple: #9c6ade;
+      --border-subtle: #333333;
+      --border-gold: var(--gold-dim);
+      --font-heading: 'Cinzel', serif;
+      --font-narrative: 'Crimson Text', serif;
+      --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      --sidebar-left: 260px;
+      --sidebar-right: 290px;
+      --bottom-bar: 72px;
+      --radius: 6px;
+      --transition: 0.2s ease;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-void);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      font-size: 14px;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+    /* ========== APP SHELL ========== */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border-gold);
+      flex-shrink: 0;
+      z-index: 20;
+    }
+
+    .app-header .logo {
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .app-header .logo span { color: var(--text-dim); font-weight: 400; }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-controls button {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 4px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      transition: all var(--transition);
+    }
+
+    .header-controls button:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .mobile-toggle {
+      display: none;
+      background: transparent;
+      border: 1px solid var(--border-gold);
+      color: var(--gold);
+      padding: 4px 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-ui);
+      font-size: 0.85rem;
+    }
+
+    .main-area {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ========== LEFT SIDEBAR: CHARACTER SHEET ========== */
+    .sidebar-left {
+      width: var(--sidebar-left);
+      flex-shrink: 0;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-gold);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .char-header {
+      padding: 16px;
+      text-align: center;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .char-name {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      color: var(--gold);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .char-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .char-level {
+      display: inline-block;
+      margin-top: 6px;
+      font-family: var(--font-heading);
+      font-size: 0.75rem;
+      color: var(--gold-light);
+      background: rgba(201, 162, 60, 0.12);
+      padding: 2px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--gold-dim);
+    }
+
+    .section { padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); }
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--gold-dim);
+      margin-bottom: 8px;
+    }
+
+    /* Ability Scores */
+    .ability-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 8px;
+    }
+
+    .ability-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 6px;
+      border-radius: 3px;
+      transition: background var(--transition);
+    }
+
+    .ability-item:hover { background: var(--bg-panel-raised); }
+
+    .ability-label {
+      font-weight: 600;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      letter-spacing: 1px;
+    }
+
+    .ability-value {
+      font-size: 0.85rem;
+      color: var(--text-primary);
+    }
+
+    .ability-mod {
+      font-size: 0.75rem;
+      color: var(--gold);
+      margin-left: 4px;
+    }
+
+    /* HP Bar */
+    .hp-section { display: flex; flex-direction: column; gap: 6px; }
+
+    .hp-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .hp-label { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); }
+
+    .hp-numbers {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .hp-bar-container {
+      width: 100%;
+      height: 14px;
+      background: var(--hp-bg);
+      border-radius: 7px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .hp-bar-fill {
+      height: 100%;
+      border-radius: 7px;
+      transition: width 0.5s ease, background 0.5s ease;
+      background: linear-gradient(90deg, var(--hp-green), #66bb6a);
+      position: relative;
+    }
+
+    .hp-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.15), transparent);
+      border-radius: 7px 7px 0 0;
+    }
+
+    .hp-bar-fill.yellow { background: linear-gradient(90deg, var(--hp-yellow), #ffb74d); }
+    .hp-bar-fill.red { background: linear-gradient(90deg, var(--hp-red), #ef5350); }
+
+    /* AC */
+    .ac-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .ac-shield {
+      width: 42px;
+      height: 42px;
+      border: 2px solid var(--gold);
+      border-radius: 4px 4px 50% 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .ac-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Inventory */
+    .inventory-list, .abilities-list {
+      max-height: 120px;
+      overflow-y: auto;
+      list-style: none;
+    }
+
+    .inventory-list li, .abilities-list li {
+      padding: 4px 6px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      cursor: default;
+      transition: color var(--transition);
+    }
+
+    .inventory-list li:hover { color: var(--text-primary); }
+
+    .inventory-list li .item-icon { margin-right: 6px; opacity: 0.6; }
+
+    /* XP Bar */
+    .xp-bar-container {
+      width: 100%;
+      height: 6px;
+      background: rgba(74, 144, 217, 0.15);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .xp-bar-fill {
+      height: 100%;
+      background: var(--accent-blue);
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    .xp-text {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-align: center;
+      margin-top: 3px;
+    }
+
+    /* ========== CENTER: NARRATIVE ========== */
+    .center-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      position: relative;
+    }
+
+    .narrative-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(42, 38, 30, 0.6) 0%, transparent 70%),
+        var(--bg-narrative);
+      scroll-behavior: smooth;
+    }
+
+    .narrative-entry {
+      margin-bottom: 16px;
+      animation: fadeInUp 0.3s ease;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* DM Message */
+    .msg-dm {
+      border-left: 3px solid var(--gold);
+      padding: 10px 16px;
+      background: rgba(201, 162, 60, 0.04);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+
+    .msg-dm .sender {
+      font-family: var(--font-heading);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--gold-dim);
+      margin-bottom: 4px;
+    }
+
+    .msg-dm .body {
+      font-family: var(--font-narrative);
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--text-dm);
+    }
+
+    .msg-dm .body strong { color: var(--gold-light); font-weight: 700; }
+    .msg-dm .body em { color: var(--accent-blue); font-style: italic; }
+
+    /* Player Message */
+    .msg-player {
+      text-align: right;
+      padding: 8px 16px;
+      margin-left: 15%;
+    }
+
+    .msg-player .sender {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--accent-purple);
+      margin-bottom: 2px;
+    }
+
+    .msg-player .body {
+      display: inline-block;
+      text-align: left;
+      background: rgba(156, 106, 222, 0.1);
+      border: 1px solid rgba(156, 106, 222, 0.2);
+      padding: 8px 14px;
+      border-radius: 12px 12px 2px 12px;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+
+    /* System / Dice Message */
+    .msg-system {
+      text-align: center;
+      padding: 8px 16px;
+    }
+
+    .msg-system .body {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .msg-system .body .dice-icon { margin-right: 6px; }
+
+    .msg-system.dice-result .body {
+      border-color: var(--gold-dim);
+      color: var(--gold-light);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    /* Loading spinner */
+    .msg-loading {
+      border-left: 3px solid var(--gold);
+      padding: 10px 16px;
+      background: rgba(201, 162, 60, 0.04);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .loading-dots span {
+      width: 8px;
+      height: 8px;
+      background: var(--gold-dim);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .loading-dots span:nth-child(1) { animation-delay: 0s; }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ========== RIGHT SIDEBAR: TOOLS ========== */
+    .sidebar-right {
+      width: var(--sidebar-right);
+      flex-shrink: 0;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-gold);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 4px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      font-family: var(--font-ui);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--text-secondary); background: rgba(255,255,255,0.02); }
+
+    .tab-btn.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+      background: rgba(201, 162, 60, 0.05);
+    }
+
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .tab-pane {
+      display: none;
+      padding: 14px;
+      animation: slideIn 0.25s ease;
+    }
+
+    .tab-pane.active { display: block; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Dice Roller */
+    .dice-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .dice-btn {
+      background: var(--bg-panel-raised);
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      padding: 10px 4px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .dice-btn:hover {
+      background: rgba(201, 162, 60, 0.12);
+      border-color: var(--gold);
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+
+    .dice-btn:active { transform: scale(0.95); }
+
+    .custom-roll {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .custom-roll input {
+      flex: 1;
+      background: var(--bg-void);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      font-family: var(--font-ui);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .custom-roll input:focus { border-color: var(--gold-dim); }
+
+    .custom-roll input::placeholder { color: var(--text-dim); }
+
+    .custom-roll button {
+      background: var(--gold-dim);
+      border: none;
+      color: var(--bg-void);
+      padding: 8px 14px;
+      border-radius: var(--radius);
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .custom-roll button:hover { background: var(--gold); }
+
+    .adv-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .adv-toggle button {
+      flex: 1;
+      padding: 6px;
+      background: var(--bg-void);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: var(--font-ui);
+    }
+
+    .adv-toggle button.active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(201, 162, 60, 0.08);
+    }
+
+    .roll-result {
+      text-align: center;
+      padding: 16px;
+      margin-bottom: 14px;
+      background: rgba(201, 162, 60, 0.06);
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius);
+      min-height: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .roll-result .result-number {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--gold-light);
+      line-height: 1;
+    }
+
+    .roll-result .result-detail {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .roll-result.rolling .result-number {
+      animation: rollSpin 0.08s infinite;
+    }
+
+    @keyframes rollSpin {
+      0% { opacity: 1; }
+      50% { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+
+    .roll-history { list-style: none; }
+
+    .roll-history li {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 6px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .roll-history li .rh-formula { color: var(--text-secondary); }
+    .roll-history li .rh-total { color: var(--gold); font-weight: 600; }
+
+    /* NPC List */
+    .npc-list { list-style: none; }
+
+    .npc-item {
+      padding: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: background var(--transition);
+      border-radius: var(--radius);
+    }
+
+    .npc-item:hover { background: var(--bg-panel-raised); }
+
+    .npc-item.expanded { background: rgba(201, 162, 60, 0.04); }
+
+    .npc-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .npc-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--bg-void);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .npc-info { flex: 1; min-width: 0; }
+
+    .npc-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .npc-race {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .npc-rel {
+      font-size: 1rem;
+      opacity: 0.7;
+    }
+
+    .npc-details {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .npc-item.expanded .npc-details { display: block; }
+
+    /* Quest Log */
+    .quest-list { list-style: none; }
+
+    .quest-item {
+      padding: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      transition: background var(--transition);
+    }
+
+    .quest-item:hover { background: var(--bg-panel-raised); }
+
+    .quest-item.completed { opacity: 0.45; }
+    .quest-item.completed .quest-name { text-decoration: line-through; }
+
+    .quest-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .quest-desc {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .quest-progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .quest-progress-fill {
+      height: 100%;
+      background: var(--gold);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .quest-item.completed .quest-progress-fill { background: var(--text-dim); }
+
+    /* Map Tab */
+    .map-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: var(--bg-void);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      margin-bottom: 14px;
+    }
+
+    .map-placeholder .map-icon { font-size: 2.5rem; margin-bottom: 8px; opacity: 0.3; }
+
+    .current-location {
+      background: rgba(201, 162, 60, 0.08);
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+    }
+
+    .current-location .loc-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--gold-dim);
+      margin-bottom: 4px;
+    }
+
+    .current-location .loc-name {
+      font-family: var(--font-heading);
+      font-size: 0.95rem;
+      color: var(--gold-light);
+    }
+
+    /* ========== BOTTOM BAR: ACTION INPUT ========== */
+    .action-bar {
+      flex-shrink: 0;
+      padding: 10px 16px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border-gold);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .action-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .action-input {
+      flex: 1;
+      background: var(--bg-void);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 10px 16px;
+      border-radius: 24px;
+      font-family: var(--font-narrative);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .action-input:focus { border-color: var(--gold-dim); }
+    .action-input::placeholder { color: var(--text-dim); font-style: italic; }
+
+    .send-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--gold);
+      border: none;
+      color: var(--bg-void);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover { background: var(--gold-light); box-shadow: 0 0 16px var(--gold-glow); }
+    .send-btn:active { transform: scale(0.92); }
+
+    .quick-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .quick-btn {
+      background: var(--bg-void);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 4px 12px;
+      border-radius: 14px;
+      font-family: var(--font-ui);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .quick-btn:hover {
+      border-color: var(--gold-dim);
+      color: var(--gold);
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .mobile-toggle { display: inline-block; }
+
+      .main-area { flex-direction: column; }
+
+      .sidebar-left,
+      .sidebar-right {
+        width: 100%;
+        max-height: 45vh;
+        border-right: none;
+        border-left: none;
+        border-bottom: 1px solid var(--border-gold);
+        display: none;
+      }
+
+      .sidebar-left.visible,
+      .sidebar-right.visible {
+        display: flex;
+      }
+
+      .center-panel { flex: 1; }
+
+      .narrative-area { padding: 12px 10px; }
+
+      .msg-player { margin-left: 5%; }
+
+      .dice-buttons { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    /* ========== UTILITY ========== */
+    .hidden { display: none !important; }
+
+    /* Welcome banner inside narrative */
+    .welcome-banner {
+      text-align: center;
+      padding: 40px 20px;
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius);
+      background: rgba(201, 162, 60, 0.03);
+      margin: 20px 0;
+    }
+
+    .welcome-banner h2 {
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      color: var(--gold);
+      margin-bottom: 8px;
+      letter-spacing: 3px;
+    }
+
+    .welcome-banner p {
+      font-family: var(--font-narrative);
+      font-size: 1rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- ====== HEADER ====== -->
+    <header class="app-header">
+      <div class="logo">DMLog<span>.ai</span></div>
+      <div class="header-controls">
+        <button onclick="toggleSidebar('left')" class="mobile-toggle">Character</button>
+        <button onclick="toggleSidebar('right')" class="mobile-toggle">Tools</button>
+        <button onclick="showSettings()">Settings</button>
+        <button onclick="exportSession()">Export</button>
+      </div>
+    </header>
+
+    <!-- ====== MAIN 3-COLUMN LAYOUT ====== -->
+    <div class="main-area">
+
+      <!-- ====== LEFT: CHARACTER SHEET ====== -->
+      <aside class="sidebar-left" id="sidebarLeft">
+        <div class="char-header">
+          <div class="char-name" id="charName">Thorin Ironforge</div>
+          <div class="char-subtitle" id="charSubtitle">Mountain Dwarf &middot; Fighter</div>
+          <div class="char-level" id="charLevel">Level 5</div>
+        </div>
+
+        <!-- Ability Scores -->
+        <div class="section">
+          <div class="section-title">Ability Scores</div>
+          <div class="ability-grid" id="abilityGrid">
+            <div class="ability-item"><span class="ability-label">STR</span><span class="ability-value">18 <span class="ability-mod">(+4)</span></span></div>
+            <div class="ability-item"><span class="ability-label">DEX</span><span class="ability-value">12 <span class="ability-mod">(+1)</span></span></div>
+            <div class="ability-item"><span class="ability-label">CON</span><span class="ability-value">16 <span class="ability-mod">(+3)</span></span></div>
+            <div class="ability-item"><span class="ability-label">INT</span><span class="ability-value">10 <span class="ability-mod">(+0)</span></span></div>
+            <div class="ability-item"><span class="ability-label">WIS</span><span class="ability-value">14 <span class="ability-mod">(+2)</span></span></div>
+            <div class="ability-item"><span class="ability-label">CHA</span><span class="ability-value">8 <span class="ability-mod">(-1)</span></span></div>
+          </div>
+        </div>
+
+        <!-- HP -->
+        <div class="section">
+          <div class="section-title">Hit Points</div>
+          <div class="hp-section">
+            <div class="hp-label-row">
+              <span class="hp-label">HP</span>
+              <span class="hp-numbers" id="hpNumbers"><span id="hpCurrent">42</span> / <span id="hpMax">55</span></span>
+            </div>
+            <div class="hp-bar-container">
+              <div class="hp-bar-fill" id="hpBar" style="width: 76%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AC -->
+        <div class="section">
+          <div class="section-title">Armor Class</div>
+          <div class="ac-display">
+            <div class="ac-shield" id="acValue">18</div>
+            <span class="ac-label">AC</span>
+          </div>
+        </div>
+
+        <!-- Inventory -->
+        <div class="section">
+          <div class="section-title">Inventory</div>
+          <ul class="inventory-list" id="inventoryList">
+            <li><span class="item-icon">&#9876;</span>Warhammer +1</li>
+            <li><span class="item-icon">&#128737;</span>Plate Armor</li>
+            <li><span class="item-icon">&#128302;</span>Shield of Devotion</li>
+            <li><span class="item-icon">&#128166;</span>Potion of Healing (x3)</li>
+            <li><span class="item-icon">&#128296;</span>Thieves' Tools</li>
+            <li><span class="item-icon">&#128220;</span>Map of Undermountain</li>
+            <li><span class="item-icon">&#127874;</span>Rations (5 days)</li>
+            <li><span class="item-icon">&#128364;</span>Hempen Rope (50 ft)</li>
+          </ul>
+        </div>
+
+        <!-- Abilities / Spells -->
+        <div class="section">
+          <div class="section-title">Abilities</div>
+          <ul class="abilities-list" id="abilitiesList">
+            <li>Second Wind</li>
+            <li>Action Surge</li>
+            <li>Extra Attack</li>
+            <li>Dwarven Resilience</li>
+            <li>Stonecunning</li>
+          </ul>
+        </div>
+
+        <!-- XP -->
+        <div class="section">
+          <div class="section-title">Experience</div>
+          <div class="xp-bar-container">
+            <div class="xp-bar-fill" id="xpBar" style="width: 65%"></div>
+          </div>
+          <div class="xp-text" id="xpText">4,550 / 6,500 XP</div>
+        </div>
+      </aside>
+
+      <!-- ====== CENTER: NARRATIVE ====== -->
+      <main class="center-panel">
+        <div class="narrative-area" id="narrativeArea">
+          <div class="welcome-banner">
+            <h2>The Realm Awaits</h2>
+            <p>Your Dungeon Master is ready. Describe your action below to begin the adventure.</p>
+          </div>
+
+          <!-- Example DM message -->
+          <div class="narrative-entry msg-dm">
+            <div class="sender">Dungeon Master</div>
+            <div class="body">
+              The heavy oak door creaks open, revealing a vast chamber bathed in flickering torchlight. Stone pillars carved with <em>ancient Dwarvish runes</em> stretch toward a ceiling lost in shadow. The air is thick with dust and the faint scent of copper. Before you, a wide stone bridge spans a dark chasm, and on the far side, you can just make out the shape of <strong>Grimjaw the Troll</strong> hunched over a flickering campfire, gnawing on something you'd rather not identify.
+            </div>
+          </div>
+
+          <!-- Example player message -->
+          <div class="narrative-entry msg-player">
+            <div class="sender">Thorin Ironforge</div>
+            <div class="body">I draw my warhammer and approach the bridge cautiously, keeping to the shadows of the pillars. I want to get a better look at the troll before it notices me.</div>
+          </div>
+
+          <!-- Example system message (dice) -->
+          <div class="narrative-entry msg-system dice-result">
+            <div class="body"><span class="dice-icon">&#127922;</span> Stealth Check: d20+3 = <strong>17</strong></div>
+          </div>
+
+          <!-- Example DM response -->
+          <div class="narrative-entry msg-dm">
+            <div class="sender">Dungeon Master</div>
+            <div class="body">
+              You slip between the pillars like a whisper. The troll's ears twitch but it doesn't look up -- too absorbed in its meal. From this angle you can see a heavy iron chain around its neck, trailing off into the darkness beyond the firelight. There is a <em>wooden cage</em> against the far wall, and inside it, a small figure huddled in the corner. A child, by the look of it. The <strong>key</strong> hangs from Grimjaw's belt, glinting in the firelight.
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading indicator (hidden by default) -->
+        <div class="msg-loading hidden" id="loadingIndicator">
+          <div class="sender" style="font-family: var(--font-heading); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--gold-dim); margin-bottom: 4px;">Dungeon Master</div>
+          <div class="loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </main>
+
+      <!-- ====== RIGHT: GAME TOOLS ====== -->
+      <aside class="sidebar-right" id="sidebarRight">
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="dice" onclick="switchTab('dice')">Dice</button>
+          <button class="tab-btn" data-tab="npcs" onclick="switchTab('npcs')">NPCs</button>
+          <button class="tab-btn" data-tab="quests" onclick="switchTab('quests')">Quests</button>
+          <button class="tab-btn" data-tab="map" onclick="switchTab('map')">Map</button>
+        </div>
+
+        <div class="tab-content">
+          <!-- TAB: DICE ROLLER -->
+          <div class="tab-pane active" id="tab-dice">
+            <div class="dice-buttons">
+              <button class="dice-btn" onclick="rollDie(4)">d4</button>
+              <button class="dice-btn" onclick="rollDie(6)">d6</button>
+              <button class="dice-btn" onclick="rollDie(8)">d8</button>
+              <button class="dice-btn" onclick="rollDie(10)">d10</button>
+              <button class="dice-btn" onclick="rollDie(12)">d12</button>
+              <button class="dice-btn" onclick="rollDie(20)">d20</button>
+              <button class="dice-btn" onclick="rollDie(100)">d100</button>
+            </div>
+
+            <div class="custom-roll">
+              <input type="text" id="customRollInput" placeholder="2d6+3" onkeydown="if(event.key==='Enter')customRoll()">
+              <button onclick="customRoll()">Roll</button>
+            </div>
+
+            <div class="adv-toggle">
+              <button id="btnNormal" class="active" onclick="setAdvMode('normal')">Normal</button>
+              <button id="btnAdvantage" onclick="setAdvMode('advantage')">Advantage</button>
+              <button id="btnDisadvantage" onclick="setAdvMode('disadvantage')">Disadv.</button>
+            </div>
+
+            <div class="roll-result" id="rollResult">
+              <div class="result-number" id="resultNumber">--</div>
+              <div class="result-detail" id="resultDetail">Roll the dice</div>
+            </div>
+
+            <div class="section-title">Roll History</div>
+            <ul class="roll-history" id="rollHistory"></ul>
+          </div>
+
+          <!-- TAB: NPCs -->
+          <div class="tab-pane" id="tab-npcs">
+            <div class="section-title">Known NPCs</div>
+            <ul class="npc-list" id="npcList">
+              <li class="npc-item" onclick="toggleNpc(this)">
+                <div class="npc-row">
+                  <div class="npc-avatar">&#129302;</div>
+                  <div class="npc-info">
+                    <div class="npc-name">Eldrin Half-Moon</div>
+                    <div class="npc-race">Half-Elf &middot; Wizard</div>
+                  </div>
+                  <span class="npc-rel">&#128588;</span>
+                </div>
+                <div class="npc-details">
+                  An elderly half-elf wizard who runs the <em>Arcane Athenaeum</em> in <strong>Brindenford</strong>. He gave you the quest to explore the ruins beneath the town. Last seen: arguing with a street vendor about the price of bat guano.
+                </div>
+              </li>
+              <li class="npc-item" onclick="toggleNpc(this)">
+                <div class="npc-row">
+                  <div class="npc-avatar">&#128120;</div>
+                  <div class="npc-info">
+                    <div class="npc-name">Mayor Hendricks</div>
+                    <div class="npc-race">Human &middot; Noble</div>
+                  </div>
+                  <span class="npc-rel">&#129309;</span>
+                </div>
+                <div class="npc-details">
+                  The nervous mayor of <strong>Brindenford</strong>. He hired your party to investigate the disappearances in the old quarter. He seems trustworthy but clearly knows more than he lets on.
+                </div>
+              </li>
+              <li class="npc-item" onclick="toggleNpc(this)">
+                <div class="npc-row">
+                  <div class="npc-avatar">&#128128;</div>
+                  <div class="npc-info">
+                    <div class="npc-name">Grimjaw</div>
+                    <div class="npc-race">Troll &middot; Brute</div>
+                  </div>
+                  <span class="npc-rel">&#9876;&#65039;</span>
+                </div>
+                <div class="npc-details">
+                  A massive troll chained in the depths below <strong>Brindenford</strong>. Appears to be guarding something -- or someone. Currently hostile. Regenerates unless damaged by acid or fire.
+                </div>
+              </li>
+              <li class="npc-item" onclick="toggleNpc(this)">
+                <div class="npc-row">
+                  <div class="npc-avatar">&#129301;</div>
+                  <div class="npc-info">
+                    <div class="npc-name">Sister Callista</div>
+                    <div class="npc-race">Human &middot; Cleric</div>
+                  </div>
+                  <span class="npc-rel">&#128147;</span>
+                </div>
+                <div class="npc-details">
+                  A quiet, steel-willed priestess of <em>the Morninglord</em> who tends the shrine in town. She healed your wounds after the goblin ambush and whispered a warning: "Not everything below is what it seems."
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- TAB: QUEST LOG -->
+          <div class="tab-pane" id="tab-quests">
+            <div class="section-title">Quest Log</div>
+            <ul class="quest-list" id="questList">
+              <li class="quest-item">
+                <div class="quest-name">The Missing Children</div>
+                <div class="quest-desc">Three children have vanished from the old quarter. Find them.</div>
+                <div class="quest-progress-bar">
+                  <div class="quest-progress-fill" style="width: 60%"></div>
+                </div>
+              </li>
+              <li class="quest-item">
+                <div class="quest-name">Secrets of the Athenaeum</div>
+                <div class="quest-desc">Eldrin asked you to retrieve a tome from the ruins beneath the town.</div>
+                <div class="quest-progress-bar">
+                  <div class="quest-progress-fill" style="width: 25%"></div>
+                </div>
+              </li>
+              <li class="quest-item">
+                <div class="quest-name">The Chain That Binds</div>
+                <div class="quest-desc">Investigate the magical chain around the troll's neck.</div>
+                <div class="quest-progress-bar">
+                  <div class="quest-progress-fill" style="width: 10%"></div>
+                </div>
+              </li>
+              <li class="quest-item completed">
+                <div class="quest-name">Goblin Ambush</div>
+                <div class="quest-desc">Clear the goblin camp on the road to Brindenford.</div>
+                <div class="quest-progress-bar">
+                  <div class="quest-progress-fill" style="width: 100%"></div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <!-- TAB: MAP -->
+          <div class="tab-pane" id="tab-map">
+            <div class="map-placeholder">
+              <div class="map-icon">&#127759;</div>
+              <span>Map coming soon</span>
+            </div>
+
+            <div class="current-location">
+              <div class="loc-label">Current Location</div>
+              <div class="loc-name">The Underhalls, Level 2</div>
+            </div>
+
+            <div class="section" style="padding: 10px 0 0 0; border: none;">
+              <div class="section-title">Nearby</div>
+              <ul style="list-style: none; font-size: 0.82rem; color: var(--text-secondary);">
+                <li style="padding: 3px 0;">&#128311; Stone Bridge (ahead)</li>
+                <li style="padding: 3px 0;">&#128311; Pillared Chamber (here)</li>
+                <li style="padding: 3px 0;">&#128311; Rune-Carved Hall (behind)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ====== BOTTOM: ACTION INPUT ====== -->
+    <div class="action-bar">
+      <div class="action-input-row">
+        <input type="text" class="action-input" id="actionInput" placeholder="What do you do?" autocomplete="off" onkeydown="if(event.key==='Enter')sendAction()">
+        <button class="send-btn" onclick="sendAction()" title="Send action">&#10148;</button>
+      </div>
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="quickAction('I attack the nearest enemy with my weapon.')">&#9876;&#65039; Attack</button>
+        <button class="quick-btn" onclick="quickAction('I search the area carefully for anything hidden.')">&#128269; Search</button>
+        <button class="quick-btn" onclick="quickAction('I speak to the nearest creature in a calm voice.')">&#128172; Talk</button>
+        <button class="quick-btn" onclick="quickAction('I move to a better position.')">&#128694; Move</button>
+        <button class="quick-btn" onclick="quickAction('I use an item from my inventory.')">&#127873; Use Item</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    /* ================================================================
+       DMLog.ai -- Game Interface Logic
+       ================================================================ */
+
+    // ---- State ----
+    const state = {
+      advMode: 'normal',        // normal | advantage | disadvantage
+      rollHistory: [],
+      ws: null,
+      character: {
+        name: 'Thorin Ironforge',
+        race: 'Mountain Dwarf',
+        cls: 'Fighter',
+        level: 5,
+        hp: 42,
+        maxHp: 55,
+        ac: 18,
+        xp: 4550,
+        xpNext: 6500
+      }
+    };
+
+    // ---- Tab Switching ----
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tab === tabName); });
+      document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.toggle('active', p.id === 'tab-' + tabName); });
+    }
+
+    // ---- Sidebar Toggles (mobile) ----
+    function toggleSidebar(side) {
+      var el = side === 'left' ? document.getElementById('sidebarLeft') : document.getElementById('sidebarRight');
+      el.classList.toggle('visible');
+    }
+
+    // ---- Advantage Mode ----
+    function setAdvMode(mode) {
+      state.advMode = mode;
+      document.getElementById('btnNormal').classList.toggle('active', mode === 'normal');
+      document.getElementById('btnAdvantage').classList.toggle('active', mode === 'advantage');
+      document.getElementById('btnDisadvantage').classList.toggle('active', mode === 'disadvantage');
+    }
+
+    // ---- Crypto-Secure RNG ----
+    function secureRandom(max) {
+      var arr = new Uint32Array(1);
+      crypto.getRandomValues(arr);
+      return (arr[0] % max) + 1;
+    }
+
+    // ---- Dice Roller ----
+    function rollDie(sides) {
+      var roll1 = secureRandom(sides);
+      var total = roll1;
+      var detail = 'd' + sides + ' = ' + roll1;
+
+      if (state.advMode === 'advantage') {
+        var roll2 = secureRandom(sides);
+        total = Math.max(roll1, roll2);
+        detail = 'd' + sides + ' [' + roll1 + ', ' + roll2 + '] advantage = ' + total;
+      } else if (state.advMode === 'disadvantage') {
+        var roll2 = secureRandom(sides);
+        total = Math.min(roll1, roll2);
+        detail = 'd' + sides + ' [' + roll1 + ', ' + roll2 + '] disadvantage = ' + total;
+      }
+
+      animateRoll(total, detail);
+      addRollHistory('d' + sides, total);
+      addNarrativeDice('d' + sides, total, detail);
+    }
+
+    // ---- Custom Roll (e.g. 2d6+3) ----
+    function customRoll() {
+      var input = document.getElementById('customRollInput').value.trim();
+      if (!input) return;
+
+      var match = input.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+      if (!match) {
+        showRollResult('?', 'Invalid format. Use NdN+N, e.g. 2d6+3');
+        return;
+      }
+
+      var count = parseInt(match[1], 10);
+      var sides = parseInt(match[2], 10);
+      var modifier = match[3] ? parseInt(match[3], 10) : 0;
+
+      var rolls = [];
+      var sum = 0;
+      for (var i = 0; i < count; i++) {
+        var r = secureRandom(sides);
+        rolls.push(r);
+        sum += r;
+      }
+      var total = sum + modifier;
+      var detail = rolls.join(' + ');
+      if (modifier > 0) detail += ' + ' + modifier;
+      if (modifier < 0) detail += ' - ' + Math.abs(modifier);
+      detail += ' = ' + total;
+
+      animateRoll(total, input + ': ' + detail);
+      addRollHistory(input, total);
+      addNarrativeDice(input, total, detail);
+      document.getElementById('customRollInput').value = '';
+    }
+
+    // ---- Roll Animation ----
+    function animateRoll(finalTotal, detail) {
+      var el = document.getElementById('rollResult');
+      var numEl = document.getElementById('resultNumber');
+      var detEl = document.getElementById('resultDetail');
+
+      el.classList.add('rolling');
+      numEl.textContent = '--';
+      detEl.textContent = 'Rolling...';
+
+      var ticks = 0;
+      var maxTicks = 12;
+      var interval = setInterval(function() {
+        numEl.textContent = Math.floor(Math.random() * 100);
+        ticks++;
+        if (ticks >= maxTicks) {
+          clearInterval(interval);
+          el.classList.remove('rolling');
+          numEl.textContent = finalTotal;
+          detEl.textContent = detail;
+        }
+      }, 60);
+    }
+
+    function showRollResult(num, detail) {
+      document.getElementById('resultNumber').textContent = num;
+      document.getElementById('resultDetail').textContent = detail;
+    }
+
+    // ---- Roll History ----
+    function addRollHistory(formula, total) {
+      state.rollHistory.unshift({ formula: formula, total: total });
+      if (state.rollHistory.length > 10) state.rollHistory.pop();
+      renderRollHistory();
+    }
+
+    function renderRollHistory() {
+      var ul = document.getElementById('rollHistory');
+      ul.innerHTML = '';
+      state.rollHistory.forEach(function(r) {
+        var li = document.createElement('li');
+        li.innerHTML = '<span class="rh-formula">' + r.formula + '</span><span class="rh-total">' + r.total + '</span>';
+        ul.appendChild(li);
+      });
+    }
+
+    // ---- Narrative Helpers ----
+    function scrollToBottom() {
+      var area = document.getElementById('narrativeArea');
+      area.scrollTop = area.scrollHeight;
+    }
+
+    function addNarrativeDice(formula, total, detail) {
+      var area = document.getElementById('narrativeArea');
+      var div = document.createElement('div');
+      div.className = 'narrative-entry msg-system dice-result';
+      div.innerHTML = '<div class="body"><span class="dice-icon">&#127922;</span> ' + formula + ': ' + detail + '</div>';
+      area.appendChild(div);
+      scrollToBottom();
+    }
+
+    function addDmMessage(text) {
+      var area = document.getElementById('narrativeArea');
+      var div = document.createElement('div');
+      div.className = 'narrative-entry msg-dm';
+      div.innerHTML = '<div class="sender">Dungeon Master</div><div class="body">' + text + '</div>';
+      area.appendChild(div);
+      scrollToBottom();
+    }
+
+    function addPlayerMessage(text) {
+      var area = document.getElementById('narrativeArea');
+      var div = document.createElement('div');
+      div.className = 'narrative-entry msg-player';
+      div.innerHTML = '<div class="sender">' + escapeHtml(state.character.name) + '</div><div class="body">' + escapeHtml(text) + '</div>';
+      area.appendChild(div);
+      scrollToBottom();
+    }
+
+    function addSystemMessage(text) {
+      var area = document.getElementById('narrativeArea');
+      var div = document.createElement('div');
+      div.className = 'narrative-entry msg-system';
+      div.innerHTML = '<div class="body">' + text + '</div>';
+      area.appendChild(div);
+      scrollToBottom();
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    // ---- Loading Indicator ----
+    function showLoading() {
+      var loader = document.getElementById('loadingIndicator');
+      loader.classList.remove('hidden');
+      loader.style.display = 'block';
+      scrollToBottom();
+    }
+
+    function hideLoading() {
+      var loader = document.getElementById('loadingIndicator');
+      loader.classList.add('hidden');
+      loader.style.display = 'none';
+    }
+
+    // ---- Send Action ----
+    function sendAction() {
+      var input = document.getElementById('actionInput');
+      var text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      addPlayerMessage(text);
+      showLoading();
+
+      // Try WebSocket first, fall back to fetch
+      if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'chat', params: { message: text }, id: Date.now() }));
+      } else {
+        fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, character: state.character })
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          hideLoading();
+          if (data.reply) {
+            addDmMessage(data.reply);
+          } else if (data.error) {
+            addSystemMessage('Error: ' + data.error);
+          }
+          if (data.state) {
+            updateCharacterState(data.state);
+          }
+        })
+        .catch(function(err) {
+          hideLoading();
+          // For demo/standalone, show a placeholder response
+          addDmMessage('The Dungeon Master contemplates your actions... <em>(Connection to DM engine not available in standalone mode.)</em>');
+        });
+      }
+    }
+
+    // ---- Quick Actions ----
+    function quickAction(text) {
+      document.getElementById('actionInput').value = text;
+      document.getElementById('actionInput').focus();
+    }
+
+    // ---- HP Bar Update ----
+    function updateHp(current, max) {
+      state.character.hp = current;
+      state.character.maxHp = max;
+
+      document.getElementById('hpCurrent').textContent = current;
+      document.getElementById('hpMax').textContent = max;
+
+      var pct = Math.max(0, Math.min(100, (current / max) * 100));
+      var bar = document.getElementById('hpBar');
+      bar.style.width = pct + '%';
+
+      bar.classList.remove('yellow', 'red');
+      if (pct <= 25) {
+        bar.classList.add('red');
+        document.getElementById('hpNumbers').style.color = '#f44336';
+      } else if (pct <= 50) {
+        bar.classList.add('yellow');
+        document.getElementById('hpNumbers').style.color = '#ff9800';
+      } else {
+        document.getElementById('hpNumbers').style.color = '';
+      }
+    }
+
+    // ---- Character State Update ----
+    function updateCharacterState(data) {
+      if (data.hp !== undefined && data.maxHp !== undefined) {
+        updateHp(data.hp, data.maxHp);
+      }
+      if (data.ac !== undefined) {
+        state.character.ac = data.ac;
+        document.getElementById('acValue').textContent = data.ac;
+      }
+      if (data.xp !== undefined) {
+        state.character.xp = data.xp;
+        var pct = Math.min(100, (data.xp / state.character.xpNext) * 100);
+        document.getElementById('xpBar').style.width = pct + '%';
+        document.getElementById('xpText').textContent = data.xp.toLocaleString() + ' / ' + state.character.xpNext.toLocaleString() + ' XP';
+      }
+    }
+
+    // ---- NPC Toggle ----
+    function toggleNpc(el) {
+      el.classList.toggle('expanded');
+    }
+
+    // ---- WebSocket Connection ----
+    function connectWebSocket() {
+      var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      var wsUrl = protocol + '//' + location.host + '/ws';
+      try {
+        state.ws = new WebSocket(wsUrl);
+        state.ws.onopen = function() {
+          addSystemMessage('Connected to the Dungeon Master.');
+        };
+        state.ws.onmessage = function(evt) {
+          var data = JSON.parse(evt.data);
+          if (data.method === 'stream') {
+            // Streaming partial response
+            hideLoading();
+            addDmMessage(data.params.text);
+          } else if (data.result) {
+            hideLoading();
+            if (data.result.reply) addDmMessage(data.result.reply);
+            if (data.result.state) updateCharacterState(data.result.state);
+          }
+        };
+        state.ws.onclose = function() {
+          addSystemMessage('Connection lost. Reconnecting in 5 seconds...');
+          setTimeout(connectWebSocket, 5000);
+        };
+        state.ws.onerror = function() {
+          // Silently handle -- onclose will fire
+        };
+      } catch (e) {
+        // WebSocket not available
+      }
+    }
+
+    // ---- Settings / Export Stubs ----
+    function showSettings() {
+      addSystemMessage('Settings panel coming soon.');
+    }
+
+    function exportSession() {
+      var area = document.getElementById('narrativeArea');
+      var entries = area.querySelectorAll('.narrative-entry');
+      var text = '';
+      entries.forEach(function(e) {
+        text += e.innerText + '\n\n';
+      });
+      var blob = new Blob([text], { type: 'text/plain' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'dmlog-session-' + new Date().toISOString().slice(0, 10) + '.txt';
+      a.click();
+    }
+
+    // ---- Init ----
+    document.addEventListener('DOMContentLoaded', function() {
+      scrollToBottom();
+      // Attempt WebSocket connection
+      if (location.protocol.startsWith('http')) {
+        connectWebSocket();
+      }
+    });
+  </script>
+</body>
+</html>
