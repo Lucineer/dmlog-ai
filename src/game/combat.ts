@@ -17,7 +17,9 @@ export type ConditionName =
   | "blinded" | "charmed" | "deafened" | "exhaustion"
   | "frightened" | "grappled" | "incapacitated" | "invisible"
   | "paralyzed" | "petrified" | "poisoned" | "prone"
-  | "restrained" | "stunned" | "unconscious";
+  | "restrained" | "stunned" | "unconscious"
+  | "bleeding" | "blessed" | "shielded" | "hasted"
+  | "slowed" | "concentrating" | "raging";
 
 export type CombatantType = "player" | "npc" | "monster";
 
@@ -131,6 +133,13 @@ const CONDITION_EFFECTS: Record<ConditionName, { attackDisadvantage: boolean; ac
   restrained:   { attackDisadvantage: true,  acModifier: 0,  speedModifier: -1,  noActions: false },
   stunned:      { attackDisadvantage: false, acModifier: 0,  speedModifier: 0,   noActions: true },
   unconscious:  { attackDisadvantage: false, acModifier: 0,  speedModifier: 0,   noActions: true },
+  bleeding:     { attackDisadvantage: false, acModifier: 0,  speedModifier: 0,   noActions: false },
+  blessed:      { attackDisadvantage: false, acModifier: 0,  speedModifier: 0,   noActions: false },
+  shielded:     { attackDisadvantage: false, acModifier: 2,  speedModifier: 0,   noActions: false },
+  hasted:       { attackDisadvantage: false, acModifier: 0,  speedModifier: 1,   noActions: false },
+  slowed:       { attackDisadvantage: false, acModifier: 0,  speedModifier: -1,  noActions: false },
+  concentrating:{ attackDisadvantage: false, acModifier: 0,  speedModifier: 0,   noActions: false },
+  raging:       { attackDisadvantage: false, acModifier: 0,  speedModifier: 0,   noActions: false },
 };
 
 // ---------------------------------------------------------------------------
@@ -692,6 +701,185 @@ export class CombatManager {
       details: result,
       timestamp: Date.now(),
     });
+  }
+
+  // -----------------------------------------------------------------------
+  // Saving Throws
+  // -----------------------------------------------------------------------
+
+  /**
+   * Perform a saving throw for a combatant.
+   * Uses ability modifier + proficiency if proficient.
+   */
+  savingThrow(
+    encounterId: string,
+    combatantId: string,
+    ability: "strength" | "dexterity" | "constitution" | "intelligence" | "wisdom" | "charisma",
+    proficient: boolean,
+    proficiencyBonus: number,
+    dc: number,
+  ): { roll: number; total: number; modifier: number; success: boolean } {
+    const encounter = this.encounters.get(encounterId);
+    if (!encounter) throw new Error("Encounter not found");
+
+    const combatant = encounter.combatants.get(combatantId);
+    if (!combatant) throw new Error("Combatant not found");
+
+    const rollResult = this.dice.roll("1d20");
+    const abilityMod = getModifier(combatant.dexterityScore + (ability === "dexterity" ? 0 : ability === "strength" ? -2 : ability === "constitution" ? 0 : ability === "wisdom" ? 2 : 0)); // approximate from dex
+    const prof = proficient ? proficiencyBonus : 0;
+    const total = rollResult.total + abilityMod + prof;
+    const success = total >= dc;
+
+    this.addLog(encounter, combatantId, combatant.name, "Saving Throw",
+      `${combatant.name} rolls ${ability} save: ${total} vs DC ${dc} — ${success ? "SUCCESS" : "FAILURE"}`);
+
+    return { roll: rollResult.total, total, modifier: abilityMod + prof, success };
+  }
+
+  /**
+   * Convenience: Fortitude save (CON-based).
+   */
+  fortitudeSave(encounterId: string, combatantId: string, proficiencyBonus: number, proficient: boolean, dc: number) {
+    return this.savingThrow(encounterId, combatantId, "constitution", proficient, proficiencyBonus, dc);
+  }
+
+  /**
+   * Convenience: Reflex save (DEX-based).
+   */
+  reflexSave(encounterId: string, combatantId: string, proficiencyBonus: number, proficient: boolean, dc: number) {
+    return this.savingThrow(encounterId, combatantId, "dexterity", proficient, proficiencyBonus, dc);
+  }
+
+  /**
+   * Convenience: Will save (WIS-based).
+   */
+  willSave(encounterId: string, combatantId: string, proficiencyBonus: number, proficient: boolean, dc: number) {
+    return this.savingThrow(encounterId, combatantId, "wisdom", proficient, proficiencyBonus, dc);
+  }
+
+  // -----------------------------------------------------------------------
+  // Critical Miss Effects
+  // -----------------------------------------------------------------------
+
+  /**
+   * Resolve a critical miss (natural 1). Returns a dramatic effect:
+   * either hitting an ally or dropping a weapon.
+   */
+  resolveCriticalMiss(
+    encounterId: string,
+    attackerId: string,
+  ): { effect: "hit_ally" | "drop_weapon" | "stumble"; description: string; allyDamage?: number } {
+    const encounter = this.encounters.get(encounterId);
+    if (!encounter) return { effect: "stumble", description: "The attack goes wide." };
+
+    const attacker = encounter.combatants.get(attackerId);
+    if (!attacker) return { effect: "stumble", description: "The attack goes wide." };
+
+    const roll = this.dice.roll("1d6");
+
+    // Find adjacent allies
+    const allies = [...encounter.combatants.values()].filter(
+      c => c.isAlive && c.id !== attackerId && c.type === attacker.type,
+    );
+
+    if (roll.total <= 2 && allies.length > 0) {
+      // Hit an ally
+      const target = allies[Math.floor(Math.random() * allies.length)];
+      const dmgRoll = this.dice.roll("1d4");
+      const damage = dmgRoll.total;
+      this.applyDamage(encounterId, target.id, damage);
+      const desc = `Critical miss! ${attacker.name}'s swing goes wide and strikes ${target.name} for ${damage} damage!`;
+      this.addLog(encounter, attackerId, attacker.name, "Critical Miss", desc);
+      return { effect: "hit_ally", description: desc, allyDamage: damage };
+    } else if (roll.total <= 4) {
+      // Drop weapon
+      const desc = `Critical miss! ${attacker.name} fumbles and drops their weapon! It takes an action to recover.`;
+      this.addLog(encounter, attackerId, attacker.name, "Critical Miss", desc);
+      return { effect: "drop_weapon", description: desc };
+    } else {
+      // Stumble — lose next action advantage
+      const desc = `Critical miss! ${attacker.name} stumbles badly, leaving an opening.`;
+      this.addLog(encounter, attackerId, attacker.name, "Critical Miss", desc);
+      return { effect: "stumble", description: desc };
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // XP and Encounter Rewards
+  // -----------------------------------------------------------------------
+
+  /**
+   * Calculate XP reward when an encounter ends.
+   * Based on monster CR approximation: challengeRating ~ (maxHp + ac) / 15
+   */
+  calculateXPReward(encounterId: string): number {
+    const encounter = this.encounters.get(encounterId);
+    if (!encounter) return 0;
+
+    let totalXP = 0;
+    for (const combatant of encounter.combatants.values()) {
+      if (combatant.type !== "player") {
+        // Approximate CR from stats
+        const cr = Math.max(0.25, (combatant.maxHp + combatant.ac) / 15);
+        const xpTable: Record<string, number> = {
+          "0.25": 50, "0.5": 100, "1": 200, "2": 450, "3": 700,
+          "4": 1100, "5": 1800, "6": 2300, "7": 2900, "8": 3900,
+          "9": 5000, "10": 5900, "11": 7200, "12": 8400,
+        };
+        const crKey = cr <= 0.5 ? String(cr) : String(Math.min(12, Math.floor(cr)));
+        totalXP += xpTable[crKey] ?? Math.floor(cr * 200);
+      }
+    }
+    return totalXP;
+  }
+
+  /**
+   * End an encounter and distribute XP to surviving players.
+   */
+  endEncounterWithRewards(encounterId: string): { xp: number; survivors: string[] } {
+    const encounter = this.encounters.get(encounterId);
+    if (!encounter) return { xp: 0, survivors: [] };
+
+    encounter.isActive = false;
+    const xp = this.calculateXPReward(encounterId);
+    const survivors = [...encounter.combatants.values()]
+      .filter(c => c.isAlive && c.type === "player")
+      .map(c => c.id);
+
+    this.addLog(encounter, "", "", "Combat End",
+      `Encounter ended. ${xp} XP earned. Survivors: ${survivors.length}.`);
+    return { xp, survivors };
+  }
+
+  // -----------------------------------------------------------------------
+  // Bleeding / Status Tick
+  // -----------------------------------------------------------------------
+
+  /**
+   * Process start-of-turn effects: bleeding damage, etc.
+   */
+  processStartOfTurn(encounterId: string, combatantId: string): { bleedingDamage: number; conditionsExpired: string[] } {
+    const encounter = this.encounters.get(encounterId);
+    if (!encounter) return { bleedingDamage: 0, conditionsExpired: [] };
+
+    const combatant = encounter.combatants.get(combatantId);
+    if (!combatant) return { bleedingDamage: 0, conditionsExpired: [] };
+
+    let bleedingDamage = 0;
+    const bleeding = combatant.conditions.find(c => c.name === "bleeding");
+    if (bleeding) {
+      bleedingDamage = this.dice.roll("1d4").total;
+      combatant.hp -= bleedingDamage;
+      if (combatant.hp <= 0) {
+        combatant.isAlive = false;
+        if (combatant.type === "player") {
+          this.addCondition(combatant, { name: "unconscious", duration: -1, source: "bleeding" });
+        }
+      }
+    }
+
+    return { bleedingDamage, conditionsExpired: [] };
   }
 
   // -----------------------------------------------------------------------
