@@ -1384,6 +1384,7 @@
           <button class="tab-btn" data-tab="quests" onclick="switchTab('quests')">Quests</button>
           <button class="tab-btn" data-tab="map" onclick="switchTab('map')">Map</button>
           <button class="tab-btn" data-tab="assets" onclick="switchTab('assets')">Assets</button>
+          <button class="tab-btn" data-tab="genart" onclick="switchTab('genart')">Gen Art</button>
         </div>
 
         <div class="tab-content">
@@ -1610,6 +1611,47 @@
             <div id="assetGallery" class="asset-gallery-grid">
               <div style="text-align:center;color:var(--text-dim);font-size:0.8rem;padding:20px">No assets yet. Generate one above.</div>
             </div>
+          </div>
+
+          <!-- TAB: GENERATE ART (Gemini) -->
+          <div class="tab-pane" id="tab-genart">
+            <div class="section-title">Generate Art</div>
+            <div style="margin-bottom:10px">
+              <label style="display:block;margin-bottom:4px;font-size:0.75rem;color:var(--text-secondary)">Prompt</label>
+              <input id="genArtPrompt" type="text" placeholder="e.g. a dragon perched on a mountain" style="width:100%;background:var(--bg-void);border:1px solid var(--border-subtle);color:var(--text-primary);padding:6px 8px;border-radius:var(--radius);font-size:0.85rem">
+            </div>
+            <div style="margin-bottom:10px">
+              <label style="display:block;margin-bottom:4px;font-size:0.75rem;color:var(--text-secondary)">Style</label>
+              <select id="genArtStyle" style="width:100%;background:var(--bg-void);border:1px solid var(--border-subtle);color:var(--text-primary);padding:6px 8px;border-radius:var(--radius);font-size:0.85rem">
+                <option value="japanese_ukiyoe">Ukiyo-e</option>
+                <option value="chinese_inkwash">Ink Wash</option>
+                <option value="korean_folk">Korean Folk</option>
+                <option value="indian_miniature">Indian Miniature</option>
+                <option value="arabian_persian">Arabian / Persian</option>
+                <option value="african_ancestor">African Ancestral</option>
+                <option value="norse_viking" selected>Norse Viking</option>
+                <option value="celtic_druid">Celtic Druid</option>
+                <option value="aztec_mayan">Aztec / Mayan</option>
+                <option value="native_spiritwalker">Native Spirit Walker</option>
+                <option value="se_asian_golden">SE Asian Golden</option>
+                <option value="eastern_european_gothic">Eastern European Gothic</option>
+              </select>
+            </div>
+            <button id="genArtBtn" onclick="generateArt()" style="width:100%;padding:8px;background:var(--gold-dim);border:none;color:var(--bg-void);font-weight:700;border-radius:var(--radius);cursor:pointer;font-size:0.85rem;transition:background 0.2s" onmouseover="this.style.background='var(--gold)'" onmouseout="this.style.background='var(--gold-dim)'">Generate</button>
+
+            <!-- Image preview -->
+            <div id="genArtPreview" style="display:none;margin-top:12px;border:1px solid var(--border-subtle);border-radius:var(--radius);overflow:hidden;background:var(--bg-void)">
+              <img id="genArtImage" style="width:100%;display:block" alt="Generated art">
+            </div>
+
+            <!-- Action buttons (shown after generation) -->
+            <div id="genArtActions" style="display:none;margin-top:8px;gap:6px;flex-direction:column">
+              <button onclick="downloadGenArt()" style="width:100%;padding:7px;background:var(--bg-panel-raised);border:1px solid var(--gold-dim);color:var(--gold);font-size:0.82rem;border-radius:var(--radius);cursor:pointer;font-weight:600">Download</button>
+              <button onclick="useGenArtAsBackdrop()" style="width:100%;padding:7px;background:var(--bg-panel-raised);border:1px solid var(--gold-dim);color:var(--gold);font-size:0.82rem;border-radius:var(--radius);cursor:pointer;font-weight:600">Use as Scene Backdrop</button>
+            </div>
+
+            <div id="genArtError" style="display:none;margin-top:8px;padding:8px;background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.3);border-radius:var(--radius);font-size:0.8rem;color:#f44336"></div>
+          </div>
           </div>
         </div>
       </aside>
@@ -2167,6 +2209,72 @@
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') closeLightbox();
     });
+
+    // ========== GENERATE ART (Gemini) ==========
+
+    var lastGeneratedArtData = null;
+
+    function generateArt() {
+      var prompt = document.getElementById('genArtPrompt').value.trim();
+      if (!prompt) { alert('Enter a prompt for the image.'); return; }
+
+      var style = document.getElementById('genArtStyle').value;
+      var btn = document.getElementById('genArtBtn');
+      var preview = document.getElementById('genArtPreview');
+      var actions = document.getElementById('genArtActions');
+      var errorEl = document.getElementById('genArtError');
+
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      preview.style.display = 'none';
+      actions.style.display = 'none';
+      errorEl.style.display = 'none';
+
+      fetch('/api/generate/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt, style: style })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+        if (data.error) {
+          errorEl.textContent = data.error;
+          errorEl.style.display = 'block';
+          return;
+        }
+        if (data.image) {
+          lastGeneratedArtData = data.image;
+          document.getElementById('genArtImage').src = data.image;
+          preview.style.display = 'block';
+          actions.style.display = 'flex';
+        }
+      })
+      .catch(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+        errorEl.textContent = 'Image generation failed. Check your connection.';
+        errorEl.style.display = 'block';
+      });
+    }
+
+    function downloadGenArt() {
+      if (!lastGeneratedArtData) return;
+      var a = document.createElement('a');
+      a.href = lastGeneratedArtData;
+      a.download = 'dmlog-art-' + Date.now() + '.png';
+      a.click();
+    }
+
+    function useGenArtAsBackdrop() {
+      if (!lastGeneratedArtData) return;
+      var area = document.getElementById('narrativeArea');
+      area.style.backgroundImage = 'url(' + lastGeneratedArtData + ')';
+      area.style.backgroundSize = 'cover';
+      area.style.backgroundPosition = 'center';
+      addSystemMessage('Scene backdrop updated with generated art.');
+    }
   </script>
 </body>
 </html>

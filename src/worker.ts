@@ -21,6 +21,7 @@ interface Env {
   LLM_PROVIDER: string;       // 'openai' | 'anthropic' | 'deepseek'
   LLM_API_KEY: string;
   LLM_MODEL: string;
+  GOOGLE_API_KEY: string;
   ASSETS?: { fetch: (req: Request) => Promise<Response> };
 }
 
@@ -752,6 +753,106 @@ async function handleAssetRoutes(path: string, request: Request, env: Env): Prom
     return new Response(JSON.stringify({ assets: gallery }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     });
+  }
+
+  // POST /api/generate/image — Gemini-powered image generation
+  if (path === '/api/generate/image' && request.method === 'POST') {
+    try {
+      const body = await request.json() as { prompt?: string; style?: string };
+      if (!body.prompt) return errorResponse(400, 'bad_request');
+
+      const apiKey = env.GOOGLE_API_KEY;
+      if (!apiKey) {
+        return new Response(JSON.stringify({ error: 'Image generation is not configured. GOOGLE_API_KEY is missing.', code: 'no_api_key' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
+      }
+
+      const { buildImagePrompt } = await import('./game/styles.js');
+      const styleId = body.style ?? 'norse_viking';
+      const fullPrompt = buildImagePrompt(body.prompt, styleId);
+
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`;
+
+      const geminiBody = JSON.stringify({
+        contents: [{ parts: [{ text: `Generate an image: ${fullPrompt}` }] }],
+        generationConfig: {
+          responseModalities: ['IMAGE', 'TEXT'],
+        },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+        ],
+      });
+
+      const geminiResponse = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: geminiBody,
+      });
+
+      if (!geminiResponse.ok) {
+        const errText = await geminiResponse.text();
+        console.error('[DMLog] Gemini API error:', geminiResponse.status, errText);
+        if (geminiResponse.status === 429) {
+          return new Response(JSON.stringify({ error: 'Rate limited by image provider. Try again in a moment.', code: 'rate_limited' }), {
+            status: 429,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+          });
+        }
+        return new Response(JSON.stringify({ error: 'Image generation failed.', code: 'gemini_error', details: errText.slice(0, 500) }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
+      }
+
+      const geminiData = await geminiResponse.json() as {
+        candidates?: Array<{
+          content?: {
+            parts?: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>;
+          };
+        }>;
+      };
+
+      // Extract image from response
+      let imageData: string | null = null;
+      let mimeType = 'image/png';
+      let caption = '';
+
+      const parts = geminiData.candidates?.[0]?.content?.parts ?? [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          imageData = part.inlineData.data;
+          mimeType = part.inlineData.mimeType || 'image/png';
+        }
+        if (part.text) {
+          caption = part.text;
+        }
+      }
+
+      if (!imageData) {
+        return new Response(JSON.stringify({ error: 'No image was generated. Try a different prompt.', code: 'no_image', caption }), {
+          status: 502,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
+      }
+
+      return new Response(JSON.stringify({
+        image: `data:${mimeType};base64,${imageData}`,
+        mimeType,
+        prompt: fullPrompt,
+        style: styleId,
+        caption,
+      }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    } catch (err) {
+      console.error('[DMLog] Image generation error:', err);
+      return errorResponse(500, 'internal');
+    }
   }
 
   return null;
