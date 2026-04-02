@@ -153,16 +153,22 @@ interface LLMMessage {
 
 const DM_PERSONALITY = `You are the Dungeon Master for a tabletop RPG campaign. You are:
 
-- An immersive storyteller who paints vivid scenes
+- An immersive storyteller who paints vivid scenes with sensory details (sight, sound, smell, texture)
 - A fair rules arbiter who knows the game system thoroughly
 - Adaptive — you match the tone the players set (serious, humorous, heroic)
 - Responsive to player agency — you never railroad, you react
+- A performer — you give dice rolls narrative weight (natural 20 = epic, natural 1 = hilarious)
+- A storyteller who remembers — choices have delayed consequences, relationships evolve
 
 You narrate in second person present tense ("You step into the chamber...").
-You keep descriptions concise but evocative. You name NPCs, describe smells and sounds.
+You keep descriptions concise but evocative, always including at least one non-visual sensory detail.
+You name NPCs, describe smells, sounds, and the feel of the environment.
 You track the rules but don't bog down gameplay — quick rulings, look up details later if needed.
+Occasionally break the fourth wall with a "DM aside" — a brief out-of-character note about rules or strategy.
 
-Format entity mentions: @NPC for characters, *Location Name* for places, [Item Name] for objects.`;
+Format entity mentions: @NPC for characters, *Location Name* for places, [Item Name] for objects.
+
+When other party members (NPCs) are present, they react briefly to the player's actions — a grunt of approval, a worried look, a muttered comment. This replicates the feeling of sitting at a table with other players.`;
 
 // ---------------------------------------------------------------------------
 // Intent Extraction
@@ -436,14 +442,21 @@ async function saveCampaignList(list: CampaignMeta[], env: Env): Promise<void> {
 }
 
 function createDefaultWorldState(campaignId: string): WorldState {
+  const tavernId = generateId();
   return {
     campaignId,
     characters: [],
-    npcs: [],
-    locations: [{
+    npcs: [{
       id: generateId(),
-      name: 'The Starting Point',
-      description: 'A dimly lit chamber with stone walls. A single torch flickers, casting long shadows. Two passages lead deeper into darkness.',
+      name: 'The Hooded Stranger',
+      race: 'Human',
+      disposition: 'mysterious',
+      notes: 'Slid a map across the table. Seems to know more than they let on.',
+    }],
+    locations: [{
+      id: tavernId,
+      name: "The Drunken Dragon Tavern",
+      description: "Smoke curls from a stone chimney into the night sky. Inside, the warmth of a crackling hearth wraps around you like a blanket. The smell of roasting meat and spiced ale fills the air. A hooded stranger at a corner table catches your eye and slides a weathered map across the scarred oak surface. Around you, patrons laugh, argue, and pretend not to notice. The floorboards creak with every step, and somewhere upstairs, a door closes.",
       connections: [],
       discovered: true,
     }],
@@ -454,9 +467,19 @@ function createDefaultWorldState(campaignId: string): WorldState {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       turnCount: 0,
-      currentScene: 'The Starting Point',
+      currentScene: "The Drunken Dragon Tavern",
     },
   };
+}
+
+/** Generate the opening narration for a new campaign (Fix 5: Onboarding Magic). */
+function generateOpeningNarration(campaignName: string): string {
+  const openings = [
+    `You wake with a start. Firelight dances across rough-hewn beams overhead, and the smell of wood smoke and stale ale fills your nose. Your head pounds — was it the mead, or something else?\n\nYou're sitting at a table in a tavern you don't recognize. *The Drunken Dragon*, according to the sign you glimpsed through the window. Across from you, a hooded stranger slides a weathered map across the scarred oak surface.\n\n"I've been waiting for you," they say, voice barely above a whisper. "Don't ask how I know your name. The real question is: do you want to know what's marked on this map?"\n\nAround you, the tavern hums with life — a bard tuning a lute, a group of dwarves arguing over dice, a barkeep polishing mugs with practiced indifference. The stranger's eyes glint in the firelight. What do you do?`,
+    `The door slams open. Rain pours in, and so do you — soaking wet, out of breath, and very aware that someone is following you.\n\nYou stumble into *The Drunken Dragon Tavern*, and every eye turns your way. The warmth hits you like a wall: roasting meat, crackling fire, the hum of conversation. A hooded figure in the corner doesn't look up, but they raise one hand and beckon.\n\nAs you approach, they slide a map across the table. "You're late," they say. "And you led them straight here. Sit. We don't have much time."\n\nThe other patrons go back to their drinks, but you can feel the tension. What do you do?`,
+    `Your eyes open to the smell of fresh bread and the sound of a crackling fire. You're slumped over a table at *The Drunken Dragon Tavern*, an empty tankard beside you. The morning light filters through shutters thick with dust.\n\nSomeone has placed a map under your hand while you slept. It shows a winding path through mountains to a place marked only with a red X. A note in elegant handwriting reads: "Your past has caught up. Follow this path or be found."\n\nA hooded stranger watches you from across the room, their face half-hidden in shadow. They raise a cup in a silent toast. The tavern is nearly empty — just you, the stranger, and a barkeep who pretends not to notice. What do you do?`,
+  ];
+  return openings[Math.floor(Math.random() * openings.length)];
 }
 
 // ---------------------------------------------------------------------------
@@ -619,10 +642,46 @@ function corsHeaders(): Record<string, string> {
 }
 
 // ---------------------------------------------------------------------------
+// Share Card HTML Builder (Fix 6: Viral Moment)
+// ---------------------------------------------------------------------------
+
+function buildShareCardHTML(quote: string, characterName: string, scene: string): string {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{margin:0;padding:0;background:#0a0a1a;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:Georgia,serif}
+  .card{max-width:500px;width:100%;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #d4af37;border-radius:12px;padding:2rem;position:relative;overflow:hidden}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#d4af37,#f4e4ba,#d4af37)}
+  .logo{color:#d4af37;font-size:1.2rem;text-align:center;margin-bottom:1rem;letter-spacing:2px;text-transform:uppercase}
+  .quote{color:#e0e0e0;font-size:1.1rem;line-height:1.6;font-style:italic;text-align:center;margin:1.5rem 0}
+  .quote::before{content:'\\201C';color:#d4af37;font-size:2rem;display:block}
+  .quote::after{content:'\\201D';color:#d4af37;font-size:2rem;display:block;text-align:right}
+  .meta{color:#888;text-align:center;font-size:0.85rem;margin-top:1rem}
+  .character{color:#d4af37;font-weight:bold}
+  .scene{color:#a0a0a0}
+  .footer{text-align:center;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #333}
+  .footer a{color:#d4af37;text-decoration:none;font-size:0.8rem}
+</style></head><body>
+<div class="card">
+  <div class="logo">DMLog.ai</div>
+  <div class="quote">${quote.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+  <div class="meta">
+    <span class="character">${characterName.replace(/</g, '&lt;')}</span> in <span class="scene">${scene.replace(/</g, '&lt;')}</span>
+  </div>
+  <div class="footer"><a href="https://dmlog.ai">Your AI Dungeon Master</a></div>
+</div>
+</body></html>`;
+}
+
+// ---------------------------------------------------------------------------
 // Asset Generation helpers (imported from game modules)
 // ---------------------------------------------------------------------------
 
 async function handleAssetRoutes(path: string, request: Request, env: Env): Promise<Response | null> {
+  const { buildTableFeelPrompt, inferPacingMode, buildSensoryNarration, maybeDMAside } = await import('./game/table-feel.js');
+  const { EmotionEngine } = await import('./game/emotions.js');
+  const { ConsequenceTracker } = await import('./game/consequences.js');
+  const { SurpriseGenerator } = await import('./game/surprises.js');
   const { getStyle, getAllStyles, mixStyles, generateStylePrompt } = await import('./game/world-styles.js');
   const { buildAssetPrompt, buildSpritePrompt, buildScenePrompt, ASSET_RECIPES } = await import('./game/asset-recipes.js');
   const { startResearch, checkResearchStatus, getJob } = await import('./game/auto-research.js');
@@ -744,6 +803,97 @@ async function handleAssetRoutes(path: string, request: Request, env: Env): Prom
     return new Response(JSON.stringify(report), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     });
+  }
+
+  // POST /api/campaign/{id}/share — Fix 6: Viral share card
+  const shareMatch = path.match(/^\/api\/campaign\/([a-f0-9]+)\/share$/);
+  if (shareMatch && request.method === 'POST') {
+    try {
+      const campaignId = shareMatch[1];
+      const raw = await env.WORLD_STATE.get(`campaign:${campaignId}`);
+      if (!raw) return errorResponse(404, 'no_campaign');
+      const state: WorldState = JSON.parse(raw);
+
+      const log = state.narrativeLog;
+      if (log.length === 0) {
+        return new Response(JSON.stringify({ error: 'No story yet — start playing first!', code: 'no_story' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
+      }
+
+      const dramaticKeywords = ['critical', 'natural 20', 'dies', 'reveals', 'betrayed', 'dragon', 'legendary', 'ancient', 'boss'];
+      let bestEntry = log[log.length - 1];
+      let bestScore = 0;
+      for (const entry of log.slice(-10)) {
+        let score = 1;
+        const combined = (entry.playerAction + ' ' + entry.dmNarration).toLowerCase();
+        for (const kw of dramaticKeywords) {
+          if (combined.includes(kw)) score += 3;
+        }
+        if (score > bestScore) { bestScore = score; bestEntry = entry; }
+      }
+
+      const sentences = bestEntry.dmNarration.split(/[.!?]+/).filter((s: string) => s.trim().length > 20);
+      const quote = sentences.length > 0
+        ? sentences[Math.floor(Math.random() * Math.min(3, sentences.length))].trim()
+        : bestEntry.dmNarration.slice(0, 200);
+
+      const shareCard = {
+        campaignId,
+        quote,
+        playerAction: bestEntry.playerAction,
+        turn: bestEntry.turn,
+        timestamp: bestEntry.timestamp,
+        characterName: state.characters[0]?.name ?? 'The Adventurer',
+        scene: state.metadata.currentScene,
+        html: buildShareCardHTML(quote, state.characters[0]?.name ?? 'The Adventurer', state.metadata.currentScene),
+      };
+
+      return new Response(JSON.stringify(shareCard), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    } catch {
+      return errorResponse(500, 'internal');
+    }
+  }
+
+  // GET /api/campaign/{id}/relationships — Emotion Engine endpoint
+  const relationshipsMatch = path.match(/^\/api\/campaign\/([a-f0-9]+)\/relationships$/);
+  if (relationshipsMatch && request.method === 'GET') {
+    try {
+      const campaignId = relationshipsMatch[1];
+      const emotionData = await env.WORLD_STATE.get(`campaign:${campaignId}:relationships`);
+      if (!emotionData) {
+        return new Response(JSON.stringify({ relationships: [], summary: 'No relationships established yet.' }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
+      }
+      return new Response(emotionData, {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    } catch {
+      return errorResponse(500, 'internal');
+    }
+  }
+
+  // GET /api/campaign/{id}/choices — Consequence tracker endpoint
+  const choicesMatch = path.match(/^\/api\/campaign\/([a-f0-9]+)\/choices$/);
+  if (choicesMatch && request.method === 'GET') {
+    try {
+      const campaignId = choicesMatch[1];
+      const choiceData = await env.WORLD_STATE.get(`campaign:${campaignId}:choices`);
+      if (!choiceData) {
+        return new Response(JSON.stringify({ choices: [], butterflyScore: 0, narrativePath: 'An unwritten story.' }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        });
+      }
+      return new Response(choiceData, {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+      });
+    } catch {
+      return errorResponse(500, 'internal');
+    }
   }
 
   // GET /api/gallery — all generated assets
@@ -918,7 +1068,20 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       const state = createDefaultWorldState(id);
       await env.WORLD_STATE.put(`campaign:${id}`, JSON.stringify(state));
 
-      return new Response(JSON.stringify({ campaign, state }), {
+      // Generate immersive opening narration (Fix 5: Onboarding Magic)
+      const openingNarration = generateOpeningNarration(body.name);
+
+      // Store initial narrative log entry
+      state.narrativeLog.push({
+        turn: 0,
+        timestamp: Date.now(),
+        playerAction: '(Campaign begins)',
+        dmNarration: openingNarration,
+        stateChanges: ['campaign_created'],
+      });
+      await env.WORLD_STATE.put(`campaign:${id}`, JSON.stringify(state));
+
+      return new Response(JSON.stringify({ campaign, state, openingNarration }), {
         status: 201,
         headers: { 'Content-Type': 'application/json', ...corsHeaders() },
       });
@@ -1036,8 +1199,58 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         ? '\n\n## Established Canon (DO NOT contradict these facts)\n' + canon.map(f => `- ${f.fact}`).join('\n')
         : '';
 
+      // Load emotion engine state (Fix 1)
+      const { EmotionEngine } = await import('./game/emotions.js');
+      const emotions = new EmotionEngine();
+      const emotionData = await env.WORLD_STATE.get(`campaign:${campaignId}:relationships`);
+      if (emotionData) emotions.deserialize(emotionData);
+      const emotionContext = emotions.buildPromptContext();
+
+      // Infer and apply relationship action from player message
+      const emotionAction = emotions.inferActionFromMessage(body.message);
+      if (emotionAction && worldState.npcs.length > 0) {
+        const targetNpc = worldState.npcs[0]; // Apply to first known NPC
+        emotions.applyAction(targetNpc.id, targetNpc.name, emotionAction, worldState.metadata.turnCount);
+      }
+      emotions.decay();
+
+      // Load consequence tracker (Fix 2)
+      const { ConsequenceTracker } = await import('./game/consequences.js');
+      const consequences = new ConsequenceTracker();
+      const consequenceData = await env.WORLD_STATE.get(`campaign:${campaignId}:choices`);
+      if (consequenceData) consequences.deserialize(consequenceData);
+
+      // Process pending consequences
+      const pendingNotifications = consequences.processTurn(worldState.metadata.turnCount, body.message);
+      const consequenceContext = consequences.buildPromptContext();
+
+      // Check for surprise (Fix 3)
+      const { SurpriseGenerator } = await import('./game/surprises.js');
+      const surprises = new SurpriseGenerator();
+      const surpriseData = await env.WORLD_STATE.get(`campaign:${campaignId}:surprises`);
+      if (surpriseData) surprises.deserialize(surpriseData);
+      const surprise = surprises.maybeGenerate({
+        turnCount: worldState.metadata.turnCount,
+        currentScene: worldState.metadata.currentScene,
+        combatActive: worldState.combat?.active ?? false,
+        npcIds: worldState.npcs.map(n => n.id),
+        questNames: worldState.quests.filter(q => q.status === 'active').map(q => q.name),
+        storyPhase: worldState.metadata.turnCount < 5 ? 'exposition' : worldState.metadata.turnCount < 15 ? 'rising_action' : 'climax',
+        recentEvents: worldState.narrativeLog.slice(-3).map(e => e.dmNarration.slice(0, 100)),
+        playerTags: Object.keys(consequences.getTagProfile()),
+        surpriseHistory: surprises.getHistory(5),
+      });
+
+      // Build surprise context
+      const surpriseContext = surprise
+        ? `\n\n## Surprise Event!\nInject this into narration naturally: ${surprise.title} — ${surprise.description}\nPlayer prompt: ${surprise.playerPrompt}`
+        : surprises.getHistorySummary();
+
       // Build LLM messages
-      const systemPrompt = buildSystemPrompt(worldState, characterRef, intent) + canonContext;
+      const systemPrompt = buildSystemPrompt(worldState, characterRef, intent) + canonContext +
+        (emotionContext ? '\n\n' + emotionContext : '') +
+        (consequenceContext ? '\n\n' + consequenceContext : '') +
+        (surpriseContext ? '\n\n' + surpriseContext : '');
       const recentNarrative = worldState.narrativeLog.slice(-5).map(e =>
         `Player: ${e.playerAction}\nDM: ${e.dmNarration}`
       ).join('\n\n');
@@ -1087,6 +1300,11 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
             await env.WORLD_STATE.put(`campaign:${campaignId}`, JSON.stringify(worldState));
 
+            // Persist new systems
+            await env.WORLD_STATE.put(`campaign:${campaignId}:relationships`, emotions.serialize());
+            await env.WORLD_STATE.put(`campaign:${campaignId}:choices`, consequences.serialize());
+            await env.WORLD_STATE.put(`campaign:${campaignId}:surprises`, surprises.serialize());
+
             // Update campaign meta
             const list = await getCampaignList(env);
             const meta = list.find(c => c.id === campaignId);
@@ -1096,7 +1314,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
               await saveCampaignList(list, env);
             }
 
-            await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'done', narration, intent })}\n\n`));
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'done', narration, intent, consequenceNotifications: pendingNotifications, surprise: surprise ? { title: surprise.title, description: surprise.description } : null })}\n\n`));
           } catch (err) {
             console.error('[DMLog] Stream error:', err);
             await writer.write(encoder.encode(`data: ${JSON.stringify({ type: 'error', message: 'An arcane disturbance disrupted the weaving.' })}\n\n`));
@@ -1140,6 +1358,11 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
       await env.WORLD_STATE.put(`campaign:${campaignId}`, JSON.stringify(worldState));
 
+      // Persist new systems (Fixes 1-3)
+      await env.WORLD_STATE.put(`campaign:${campaignId}:relationships`, emotions.serialize());
+      await env.WORLD_STATE.put(`campaign:${campaignId}:choices`, consequences.serialize());
+      await env.WORLD_STATE.put(`campaign:${campaignId}:surprises`, surprises.serialize());
+
       // Update campaign meta
       const list = await getCampaignList(env);
       const meta = list.find(c => c.id === campaignId);
@@ -1154,6 +1377,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         intent,
         canonWarning: contradiction,
         worldState,
+        consequenceNotifications: pendingNotifications,
+        surprise: surprise ? { title: surprise.title, description: surprise.description } : null,
       }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders() },
       });
@@ -1162,6 +1387,18 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       return errorResponse(500, 'internal');
     }
   }
+
+  // ----- Campaign Lifecycle API routes -----
+
+  const { handleCampaignRoutes } = await import('./game/campaign-api.js');
+  const campaignResponse = await handleCampaignRoutes(path, request, env);
+  if (campaignResponse) return campaignResponse;
+
+  // ----- Pre-rendered Asset serving routes -----
+
+  const { handleAssetServeRoutes } = await import('./game/asset-serve.js');
+  const assetServeResponse = await handleAssetServeRoutes(path, request, env);
+  if (assetServeResponse) return assetServeResponse;
 
   // ----- Asset Generation API routes -----
 
@@ -1227,7 +1464,7 @@ function handleWebSocket(ws: WebSocket, env: Env): void {
 
           // Build messages and stream
           const intent = extractIntent(message);
-          const systemPrompt = buildSystemPrompt(worldState, character, intent);
+          const systemPrompt = buildSystemPrompt(worldState, character, intent, env);
           const recentNarrative = worldState.narrativeLog.slice(-5).map(e =>
             `Player: ${e.playerAction}\nDM: ${e.dmNarration}`
           ).join('\n\n');
@@ -1286,28 +1523,80 @@ function handleWebSocket(ws: WebSocket, env: Env): void {
 // Prompt Building
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(state: WorldState, character: string, intent: PlayerIntent): string {
+function buildSystemPrompt(state: WorldState, character: string, intent: PlayerIntent, env?: Env): string {
   const currentScene = state.metadata.currentScene ?? 'Unknown location';
   const activeChars = state.characters.map(c => `${c.name} (${c.race} ${c.class} Lv${c.level}, HP: ${c.hp}/${c.maxHp}, AC: ${c.ac})`).join('; ');
   const activeNpcs = state.npcs.map(n => `${n.name} (${n.disposition})`).join('; ');
   const activeQuests = state.quests.filter(q => q.status === 'active').map(q => q.name).join(', ') ?? 'None';
   const inCombat = state.combat?.active ? `In combat — Round ${state.combat.round}` : 'Not in combat';
+  const turnCount = state.metadata.turnCount;
+
+  // Determine pacing mode from intent
+  const pacingMode = inferPacingModeFromIntent(intent);
+
+  // Build table-feel prompt
+  const tableFeelPrompt = buildTableFeelPromptStr(pacingMode);
+
+  // Build sensory narration hint based on scene
+  const sensoryHint = buildSensoryHint(currentScene);
 
   return [
     DM_PERSONALITY,
+    tableFeelPrompt,
     '',
     '## Campaign State',
     `Scene: ${currentScene}`,
+    `Sensory context: ${sensoryHint}`,
     `Combat: ${inCombat}`,
     `Characters: ${activeChars || 'None yet'}`,
     `NPCs present: ${activeNpcs || 'None visible'}`,
     `Active quests: ${activeQuests}`,
-    `Turn: ${state.metadata.turnCount}`,
+    `Turn: ${turnCount}`,
     '',
     `Active character: ${character}`,
     `Player intent detected: ${intent}`,
+    `Pacing mode: ${pacingMode}`,
     '',
-    'Respond as the DM. Narrate the result of the player\'s action. Keep it concise but vivid.',
+    'Respond as the DM. Narrate the result of the player\'s action.',
+    pacingMode === 'combat'
+      ? 'Keep it fast and punchy. Focus on the action.'
+      : pacingMode === 'roleplay'
+        ? 'Let the scene breathe. Give NPCs depth and personality.'
+        : 'Paint the scene with sensory details. Make the world feel alive.',
+  ].join('\n');
+}
+
+/** Determine pacing mode from player intent type. */
+function inferPacingModeFromIntent(intent: PlayerIntent): string {
+  switch (intent) {
+    case 'attack': case 'cast_spell': return 'combat';
+    case 'rest': return 'rest';
+    case 'talk': return 'roleplay';
+    case 'move': return 'transition';
+    default: return 'exploration';
+  }
+}
+
+/** Build a sensory hint for the DM based on location name. */
+function buildSensoryHint(sceneName: string): string {
+  const lower = sceneName.toLowerCase();
+  if (lower.includes('tavern') || lower.includes('inn')) return 'smell of ale and wood smoke, crackling hearth, murmur of conversation';
+  if (lower.includes('dungeon') || lower.includes('cave')) return 'damp stone, dripping water, smell of mold, echo of footsteps';
+  if (lower.includes('forest') || lower.includes('wood')) return 'pine scent, birdsong, dappled light, moss underfoot';
+  if (lower.includes('mountain') || lower.includes('pass')) return 'thin cold air, howling wind, crunch of snow, vast views';
+  if (lower.includes('market') || lower.includes('town') || lower.includes('city')) return 'spice and livestock, haggling, cobblestones, crowds';
+  return 'ambient sounds, shifting light, the feel of the air';
+}
+
+/** Build the table-feel prompt addition. */
+function buildTableFeelPromptStr(pacingMode: string): string {
+  return [
+    '',
+    '## Table Feel — DM Style',
+    `Current pacing: ${pacingMode}. ${pacingMode === 'combat' ? 'Keep action fast and visceral.' : pacingMode === 'roleplay' ? 'Slow down. Let dialogue breathe. Give NPCs depth.' : 'Rich sensory descriptions. Make the world feel real.'}`,
+    'Always include at least one non-visual sensory detail (smell, sound, texture, or taste).',
+    'When dice matter: natural 20 = epic description, natural 1 = humorous failure.',
+    'If NPCs are present, briefly show their reaction to the player\'s action.',
   ].join('\n');
 }
 

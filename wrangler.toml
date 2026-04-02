@@ -2,20 +2,11 @@ name = "dmlog-ai"
 main = "src/worker.ts"
 compatibility_date = "2024-01-01"
 
+[[kv_namespaces]]
+binding = "MEMORY"
+id = "ce39a8a69ebc44abb0d518ce1a26fae7"
+
 [vars]
-ENVIRONMENT = "production"
-
-[[kv_namespaces]]
-binding = "WORLD_STATE"
-id = "placeholder-world-state-kv"
-
-[[kv_namespaces]]
-binding = "CAMPAIGNS"
-id = "placeholder-campaigns-kv"
-
-[[kv_namespaces]]
-binding = "SESSIONS"
-id = "placeholder-sessions-kv"
-
-[triggers]
-crons = ["0 */6 * * *"]
+AGENT_NAME = "DungeonMaster"
+AGENT_TONE = "dramatic, immersive, fair"
+AGENT_AVATAR = "🎭"

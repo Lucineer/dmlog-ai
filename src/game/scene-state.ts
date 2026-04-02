@@ -100,4 +100,17 @@ export class SceneManager {
   }
 
   getScene(id: string): SceneState | undefined { return this.scenes.get(id); }
+
+  // Serialization for KV storage
+  serialize(): string {
+    return JSON.stringify({
+      scenes: Object.fromEntries(this.scenes),
+      currentSceneId: this.currentSceneId
+    });
+  }
+
+  loadFromData(data: { scenes: Record<string, SceneState>; currentSceneId: string | null }): void {
+    this.scenes = new Map(Object.entries(data.scenes || {}));
+    this.currentSceneId = data.currentSceneId || null;
+  }
 }
