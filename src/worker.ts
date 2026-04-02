@@ -1048,6 +1048,11 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     }
   }
 
+  // ----- Health check -----
+  if (path === "/health" && request.method === "GET") {
+    return new Response(JSON.stringify({status:"ok",agent:"DMLog",files:57,lines:22012}),{headers:{"Content-Type":"application/json"}});
+  }
+
   // ----- Static asset routes -----
 
   if (path === '/' && request.method === 'GET') {
