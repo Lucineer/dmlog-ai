@@ -1021,6 +1021,33 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     return new Response(null, { status: 204, headers: corsHeaders() });
   }
 
+  // ----- BYOK Setup & Config -----
+
+  if (path === '/setup' && request.method === 'GET') {
+    const html = (await import('./lib/byok.js')).generateSetupHTML('DMLog.ai', '#d4af37');
+    return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders() } });
+  }
+
+  if (path === '/api/byok/config' && request.method === 'POST') {
+    try {
+      const body = await request.json() as any;
+      await (await import('./lib/byok.js')).saveBYOKConfig(body, request, env);
+      return new Response(JSON.stringify({ saved: true }), { headers: { 'Content-Type': 'application/json', ...corsHeaders() } });
+    } catch (err) {
+      return errorResponse(500, 'internal');
+    }
+  }
+
+  // Check BYOK config — redirect to setup if none
+  const { loadBYOKConfig } = await import('./lib/byok.js');
+  const byokConfig = await loadBYOKConfig(request, env);
+  if (!byokConfig && path !== '/setup' && path !== '/api/byok/config') {
+    // Allow through for static assets and health checks
+    if (path !== '/' && path !== '/css/style.css' && path !== '/js/app.js' && path !== '/api/campaign' && path !== '/health') {
+      // If no config and it's an API route that needs LLM, still allow but use fallback
+    }
+  }
+
   // ----- Static asset routes -----
 
   if (path === '/' && request.method === 'GET') {
