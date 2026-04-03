@@ -1,4 +1,6 @@
 import { softActualize, confidenceScore } from './lib/soft-actualize.js';
+import { deadbandCheck, deadbandStore, getEfficiencyStats } from './lib/deadband.js';
+import { logResponse } from './lib/response-logger.js';
 /**
  * DMLogWorker — Main Cloudflare Worker for DMLog.ai.
  *
