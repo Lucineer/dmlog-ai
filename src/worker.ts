@@ -3,6 +3,8 @@ import { selectModel } from './lib/model-router.js';
 import { trackConfidence, getConfidence } from './lib/confidence-tracker.js';
 import { softActualize, confidenceScore } from './lib/soft-actualize.js';
 import { deadbandCheck, deadbandStore, getEfficiencyStats } from './lib/deadband.js';
+import { evapPipeline } from './lib/evaporation-pipeline.js';
+
 import { logResponse } from './lib/response-logger.js';
 /**
  * DMLogWorker — Main Cloudflare Worker for DMLog.ai.
@@ -1476,9 +1478,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       }
 
       // Non-streaming: call LLM and return JSON
-      const cached = await deadbandCheck(env, JSON.stringify(messages));
-      let narration;
-      if (cached) { narration = cached; } else { narration = await callLLM(messages, env); await deadbandStore(env, JSON.stringify(messages), narration); }
+      const evapResult = await evapPipeline(env, JSON.stringify(messages), () => callLLM(messages, env), 'dmlog-ai');
+      const narration = evapResult.response;
 
       // Canon check
       const contradiction = await checkCanonConsistency(campaignId, body.message, narration, env);
