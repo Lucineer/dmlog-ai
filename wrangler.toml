@@ -11,3 +11,19 @@ id = "c93052e790d7484dad85d90f22675ae7"
 AGENT_NAME = "DungeonMaster"
 AGENT_TONE = "dramatic, immersive, fair"
 AGENT_AVATAR = "🎭"
+
+[[kv_namespaces]]
+binding = "KG"
+id = "7f65128769004afc8e779e9935c173af"
+
+[[kv_namespaces]]
+binding = "CONFIDENCE"
+id = "cfa566b7e7ef4f658ec1dde3f0cad068"
+
+[[kv_namespaces]]
+binding = "EVAPORATION"
+id = "8d3e628471984393ae27281e5480cf1c"
+
+[[kv_namespaces]]
+binding = "DEADBAND"
+id = "b745611377ab4e4491adecaea7fb5391"

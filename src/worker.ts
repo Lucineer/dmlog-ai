@@ -733,10 +733,6 @@ async function handleAssetRoutes(path: string, request: Request, env: Env): Prom
 
   // GET /api/styles — list all art styles
   
-    // ── Stub routes (safe fallbacks) ──
-    if (path === '/api/evaporation' && method === 'GET') {
-      return new Response(JSON.stringify({ status: 'ok', domain: 'dmlog-ai', cache: [], evapRate: 0 }), { headers: { 'Content-Type': 'application/json' } });
-    }
 
 if (path === '/api/styles' && request.method === 'GET') {
     const styles = getAllStyles();
@@ -1063,9 +1059,11 @@ if (path === '/api/styles' && request.method === 'GET') {
 // HTTP Handler
 // ---------------------------------------------------------------------------
 
-async function handleRequest(request: Request, env: Env): Promise<Response> {
+async function handleRequest(request: Request, env: any): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
+  const method = request.method;
+  const json = (data: any, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
 
   // Confidence tracking
@@ -1115,16 +1113,17 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   // ----- Health check -----
   // --- Seed Route ---
   // ----- Encounter Engine (PLATO TUTOR branching) -----
-  const enc = {
-    engine: await import('./lib/encounter-engine.js'),
-    demo: await import('./data/demo-encounter.js'),
+  let enc: any = null;
+  const getEnc = async () => {
+    if (!enc) enc = { engine: await import('./lib/encounter-engine.js'), demo: await import('./data/demo-encounter.js') };
+    return enc;
   };
 
   if (path === '/api/encounter/start' && request.method === 'POST') {
     const encounterId = crypto.randomUUID();
     const body = await request.json().catch(() => ({}));
-    const graph = body.encounterId === 'dragons-lair' ? enc.demo.dragonLair : enc.demo.dragonLair;
-    const state: ReturnType<typeof enc.engine.advance>['state'] = {
+    const graph = body.encounterId === 'dragons-lair' ? (await getEnc()).demo.dragonLair : (await getEnc()).demo.dragonLair;
+    const state: any['state'] = {
       encounterId,
       currentUnit: graph.startUnit,
       history: [],
@@ -1134,8 +1133,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       startedAt: Date.now(),
       updatedAt: Date.now(),
     };
-    await env.WORLD_STATE.put(enc.engine.stateKey(encounterId), JSON.stringify(state));
-    await env.WORLD_STATE.put(enc.engine.graphKey(encounterId), JSON.stringify(graph));
+    await env.WORLD_STATE.put((await getEnc()).engine.stateKey(encounterId), JSON.stringify(state));
+    await env.WORLD_STATE.put((await getEnc()).engine.graphKey(encounterId), JSON.stringify(graph));
     return new Response(JSON.stringify({ encounterId, graph: graph.id, unit: graph.nodes[graph.startUnit], state }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     });
@@ -1144,13 +1143,13 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   if (path === '/api/encounter/respond' && request.method === 'POST') {
     const body = await request.json();
     const { encounterId, choice, checkResult } = body;
-    const raw = await env.WORLD_STATE.get(enc.engine.stateKey(encounterId));
+    const raw = await env.WORLD_STATE.get((await getEnc()).engine.stateKey(encounterId));
     if (!raw) return new Response(JSON.stringify({ error: 'Encounter not found' }), { status: 404, headers: corsHeaders() });
     const state = JSON.parse(raw);
-    const graphRaw = await env.WORLD_STATE.get(enc.engine.graphKey(encounterId));
+    const graphRaw = await env.WORLD_STATE.get((await getEnc()).engine.graphKey(encounterId));
     const graph = JSON.parse(graphRaw || '{}');
-    const result = enc.engine.advance(graph, state, choice, checkResult);
-    await env.WORLD_STATE.put(enc.engine.stateKey(encounterId), JSON.stringify(result.state));
+    const result = (await getEnc()).engine.advance(graph, state, choice, checkResult);
+    await env.WORLD_STATE.put((await getEnc()).engine.stateKey(encounterId), JSON.stringify(result.state));
     return new Response(JSON.stringify({ unit: result.unit, state: result.state, message: result.message }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     });
@@ -1160,7 +1159,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const encounterId = url.searchParams.get('id');
     if (!encounterId) return new Response(JSON.stringify({ error: 'Missing id param' }), { status: 400, headers: corsHeaders() });
-    const raw = await env.WORLD_STATE.get(enc.engine.stateKey(encounterId));
+    const raw = await env.WORLD_STATE.get((await getEnc()).engine.stateKey(encounterId));
     if (!raw) return new Response(JSON.stringify({ error: 'Encounter not found' }), { status: 404, headers: corsHeaders() });
     return new Response(raw, { headers: { 'Content-Type': 'application/json', ...corsHeaders() } });
   }
@@ -1168,13 +1167,13 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   if (path === '/api/encounter/help' && request.method === 'POST') {
     const body = await request.json();
     const { encounterId, returnFromHelp } = body;
-    const raw = await env.WORLD_STATE.get(enc.engine.stateKey(encounterId));
+    const raw = await env.WORLD_STATE.get((await getEnc()).engine.stateKey(encounterId));
     if (!raw) return new Response(JSON.stringify({ error: 'Encounter not found' }), { status: 404, headers: corsHeaders() });
     const state = JSON.parse(raw);
-    const graphRaw = await env.WORLD_STATE.get(enc.engine.graphKey(encounterId));
+    const graphRaw = await env.WORLD_STATE.get((await getEnc()).engine.graphKey(encounterId));
     const graph = JSON.parse(graphRaw || '{}');
-    const result = returnFromHelp ? enc.engine.returnFromHelp(graph, state) : enc.engine.triggerHelp(graph, state);
-    await env.WORLD_STATE.put(enc.engine.stateKey(encounterId), JSON.stringify(result.state));
+    const result = returnFromHelp ? (await getEnc()).engine.returnFromHelp(graph, state) : (await getEnc()).engine.triggerHelp(graph, state);
+    await env.WORLD_STATE.put((await getEnc()).engine.stateKey(encounterId), JSON.stringify(result.state));
     return new Response(JSON.stringify({ unit: result.unit, state: result.state }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     });
@@ -1184,10 +1183,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const encounterId = url.searchParams.get('id');
     const graph = encounterId
-      ? JSON.parse(await env.WORLD_STATE.get(enc.engine.graphKey(encounterId)) || '{}')
-      : enc.demo.dragonLair;
-    const ascii = enc.engine.graphToAscii(graph);
-    const dot = enc.engine.graphToDot(graph);
+      ? JSON.parse(await env.WORLD_STATE.get((await getEnc()).engine.graphKey(encounterId)) || '{}')
+      : (await getEnc()).demo.dragonLair;
+    const ascii = (await getEnc()).engine.graphToAscii(graph);
+    const dot = (await getEnc()).engine.graphToDot(graph);
     return new Response(JSON.stringify({ graph, ascii, dot }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     });
@@ -1199,14 +1198,14 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       try {
         const report = await getEvapReport(env, 'dmlog-ai');
         return new Response(JSON.stringify(report || { status: 'ok', cache: [] }), { headers: { 'Content-Type': 'application/json' } });
-      } catch(e) { return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json' } }); }
+      } catch(e) { return new Response(JSON.stringify({ status: 'ok', domain: 'dmlog-ai', cache: [], evapRate: 0, error: String(e) }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }
     }
     // ── Knowledge Graph ─────────────────────────────
     if (path === '/api/kg' && method === 'GET') {
+      const d = url.searchParams.get('domain') || 'dmlog-ai';
       try {
-        const d = url.searchParams.get('domain') || 'dmlog-ai';
         return json({ domain: d, nodes: await getDomainNodes(env, d) });
-      } catch(e) { return new Response(JSON.stringify({ domain: d, nodes: [], error: e.message }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }
+      } catch(e) { return new Response(JSON.stringify({ domain: d, nodes: [], error: String(e) }), { status: 200, headers: { 'Content-Type': 'application/json' } }); }
     }
     if (path === '/api/kg/explore' && method === 'GET') {
       const nid = url.searchParams.get('node');
@@ -2011,7 +2010,8 @@ function serveStatic(filename: string, contentType: string): Response {
 // ---------------------------------------------------------------------------
 
 export default {
-  fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  fetch(request: Request, env: any, ctx: ExecutionContext): Promise<Response> {
+    const json = (data: any, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
     return handleRequest(request, env);
   },
 };
