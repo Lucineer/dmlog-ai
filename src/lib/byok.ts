@@ -414,6 +414,9 @@ select option{background:#1a1a2e;color:#e0e0e0}
     <div class="label">Provider</div>
     <div class="providers">${providerCards}</div>
   </div>
+  <div style="font-size:.75rem;color:#555;text-align:center;margin-top:-.5rem;margin-bottom:1rem">
+    <a href="https://platform.deepseek.com/api_keys" target="_blank" style="color:#60a5fa">DeepSeek</a> · <a href="https://cloud.siliconflow.cn" target="_blank" style="color:#60a5fa">SiliconFlow</a> · <a href="https://platform.openai.com/api-keys" target="_blank" style="color:#60a5fa">OpenAI</a> · <a href="https://console.anthropic.com" target="_blank" style="color:#60a5fa">Anthropic</a> · <a href="https://cloud.deepinfra.com" target="_blank" style="color:#60a5fa">DeepInfra</a> · <a href="https://api.moonshot.cn" target="_blank" style="color:#60a5fa">Moonshot</a>
+  </div>
 
   <div class="section">
     <div class="label">API Key</div>
