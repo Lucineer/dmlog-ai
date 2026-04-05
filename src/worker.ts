@@ -1565,6 +1565,12 @@ async function handleRequest(request: Request, env: any): Promise<Response> {
         await saveCampaignList(list, env);
       }
 
+      // Emit fleet event
+      fetch('https://fleet-orchestrator.casey-digennaro.workers.dev/api/events', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'chat', vesselId: 'dmlog-ai', data: { turn: worldState.metadata.turnCount, intent, campaign: campaignId.slice(0, 8) } }),
+      }).catch(() => {});
+
       return new Response(JSON.stringify({
         narration,
         intent,
