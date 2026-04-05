@@ -1,106 +1,217 @@
-# CLAUDE.md — DMLog.ai
+# CLAUDE.md — DMLog.ai Onboarding Guide
 
-## Project Overview
-DMLog.ai is an AI-powered Dungeon Master for tabletop roleplaying games (D&D 5e), built as a Cloudflare Worker. It uses a BYOK (Bring Your Own Key) architecture where users supply their own LLM API keys to route requests to their preferred provider. Part of the Cocapn ecosystem at cocapn.ai.
+> **You are an AI coding assistant helping set up DMLog.ai.** Follow this guide step by step. The user has forked this repo and wants to get their AI Dungeon Master running live.
 
-GitHub Organization: **Lucineer**
+## What is DMLog.ai?
 
-## Architecture Summary
+DMLog.ai is an AI-powered Dungeon Master that runs as a Cloudflare Worker. Players create campaigns, build characters, and play D&D-style adventures with an AI narrator. It's a complete TTRPG platform — not a chatbot wrapper.
 
-Single Cloudflare Worker serving everything:
-- **Inline HTML UI** — all frontend HTML is string-interpolated directly in worker.ts
-- **API Routes** — /api/chat, /api/byok, /api/campaign/:id/*, /health, /setup
-- **BYOK LLM Routing** — 7 providers with cascading config discovery
-- **Game Engine** — full D&D 5e systems in src/game/
-- **Static Assets** — 42 scene images served from /public/
+**You own this.** You forked it, you deploy it, you run it. We just built the hull.
 
-### Data Flow
-```
-User → Worker (worker.ts) → BYOK Module (byok.ts) → LLM Provider
-                                ↓
-                        Game Engine (src/game/)
-                                ↓
-                        KV Store (DMLOG_MEMORY)
-```
+---
 
-## Key Commands
+## Prerequisites
+
+Before starting, the user needs:
+1. **GitHub account** (free) — they already have this if they forked
+2. **Cloudflare account** (free) — https://dash.cloudflare.com/sign-up
+3. **At least one LLM API key** — see the Keys section below
+
+---
+
+## Step 1: Deploy to Cloudflare Workers
+
+Run these commands in order. If one fails, read the error and fix it before continuing.
 
 ```bash
-wrangler dev          # Local development server
-wrangler deploy       # Deploy to Cloudflare Workers
-wrangler tail         # Stream production logs
-git push              # Deploy on push (if CI configured)
+# Install Wrangler (Cloudflare's deploy tool)
+npm install -g wrangler
+
+# Log into Cloudflare (opens browser for auth)
+npx wrangler login
+
+# Deploy the worker
+npx wrangler deploy
 ```
 
-## Code Style & Conventions
-
-- **TypeScript throughout**, no build step — Cloudflare runs TS natively
-- **Zero runtime dependencies** for MVP — no npm packages
-- **All commits** attributed to `Author: Superinstance`
-- **Brand accent color**: #c9a23c (gold) — used in UI and theming
-- **Inline HTML pattern** — no ASSETS binding, all HTML is string templates in worker.ts
-- **No framework** — vanilla TS, direct Worker API
-
-## Testing Approach
-
-- Manual testing via `wrangler dev`
-- `/health` endpoint for uptime monitoring
-- Test BYOK routing with each provider manually
-- Verify KV reads/writes through campaign endpoints
-
-## Important File Paths
-
-| Path | Purpose |
-|------|---------|
-| `src/worker.ts` | Worker entry point, all routes, inline HTML |
-| `src/lib/byok.ts` | BYOK module — 503 lines, 7 LLM providers |
-| `src/game/` | All D&D game systems |
-| `public/` | 42 scene images |
-| `wrangler.toml` | Cloudflare Worker config, KV bindings |
-| `CLAUDE.md` | This file |
-
-### Game Engine Modules (src/game/)
-combat, spells, loot, NPCs, encounters, economy, factions, deities, weather, maps, quests, dialogue trees, character sheets, ability scores, trap system, reputation system, spellbook, monster manual, initiative tracker, magic item generator, random encounters, NPC generator
-
-## What NOT to Change
-
-- **BYOK module structure** — the config discovery cascade (URL params → Auth header → Cookie → KV → fail) is load-bearing
-- **Inline HTML pattern** — no migration to ASSETS binding or external templates
-- **Zero-dependency constraint** — do not add npm packages without discussion
-- **KV binding name** `DMLOG_MEMORY` — referenced across campaign routes
-
-## How to Add New Features
-
-1. Create new module in `src/game/` or `src/lib/`
-2. Import in `src/worker.ts`
-3. Add route handler to the appropriate section in the fetch handler
-4. For new LLM providers, extend `src/lib/byok.ts`
-5. For new game systems, add to `src/game/` and integrate with existing combat/encounter flows
-
-### Route Pattern
-```typescript
-// In worker.ts fetch handler
-if (url.pathname.startsWith('/api/your-endpoint')) {
-  return handleYourFeature(request, env);
-}
+If deployment succeeds, you'll see a URL like:
+```
+https://dmlog-ai.your-subdomain.workers.dev
 ```
 
-## Deployment
+Open that URL. You should see the DMLog landing page. **Take a moment to celebrate.**
 
-1. `wrangler deploy` — deploys directly to Cloudflare
-2. Ensure KV namespace `DMLOG_MEMORY` is bound in wrangler.toml
-3. No environment variables needed — BYOK means users provide their own keys
-4. Verify `/health` returns 200 after deploy
+---
 
-## Ecosystem Links
+## Step 2: Add API Keys
 
-- **cocapn.ai** — parent ecosystem hub
-- **Lucineer** — GitHub organization
-- Other *log.ai repos follow the same Worker + BYOK + inline HTML pattern
+DMLog.ai needs at least one LLM API key to generate narration. Without keys, it falls back to canned responses — functional but boring.
 
-## Project Stats
-- 81 TypeScript files
-- Primary theme: D&D 5e
-- 7 LLM providers supported
-- 42 scene images
-- Cloudflare Workers runtime
+### How to add keys:
+
+```bash
+# DeepInfra (RECOMMENDED — best DM models, cheap)
+npx wrangler secret put DEEPINFRA_API_KEY
+# Paste your key from https://deepinfra.com/dashboard/keys
+# Get a free key with $2 credit at https://deepinfra.com
+
+# SiliconFlow (backup — Seed-OSS-36B is great for narration)
+npx wrangler secret put SILICONFLOW_API_KEY
+# Paste your key from https://cloud.siliconflow.cn
+
+# DeepSeek (reliable fallback)
+npx wrangler secret put DEEPSEEK_API_KEY
+# Paste your key from https://platform.deepseek.com/api_keys
+```
+
+### Which models are used?
+
+The system automatically picks the best available model:
+1. **Seed-2.0-mini** (DeepInfra) — best D&D narration quality
+2. **Step-3.5-Flash** (DeepInfra) — strong backup
+3. **Seed-OSS-36B** (SiliconFlow) — third option
+4. **Nemotron-120B** (DeepInfra) — creative tier
+5. **DeepSeek-Chat** — reliable fallback
+6. And 4 more fallbacks...
+
+You don't need to configure which model. Just add keys and it figures out the rest.
+
+### Verify keys are working:
+
+```bash
+curl https://dmlog-ai.your-subdomain.workers.dev/api/models
+```
+
+You should see `"active": "Seed-2.0-mini"` (or whichever model has a key).
+
+### Free tier costs:
+
+A typical D&D session uses ~50-100 messages. With Seed-2.0-mini on DeepInfra:
+- Cost per message: ~$0.0001
+- **A full session costs about $0.01**
+- **A month of daily sessions costs about $0.30**
+- DeepInfra gives $2 free credit — that's ~6 months of play
+
+---
+
+## Step 3: Configure Settings (Optional)
+
+Edit `wrangler.toml` to customize:
+
+```toml
+# Change the worker name (affects URL)
+name = "dmlog-ai"
+
+# Add a custom domain (requires Cloudflare domain)
+# routes = [{ pattern = "dmlog.yourdomain.com", custom_domain = true }]
+```
+
+After changing `wrangler.toml`, run `npx wrangler deploy` again.
+
+---
+
+## Step 4: Play!
+
+Open your deployed URL and:
+
+1. **Click "Start a Campaign"**
+2. Choose a world theme (Fantasy, Sci-Fi, Horror, etc.)
+3. Pick a class (Fighter, Wizard, Rogue, Cleric, Ranger)
+4. Name your character
+5. **Play!** The AI DM narrates, tracks HP, rolls dice, and responds to your choices
+
+### For Dungeon Masters (your players):
+
+Share your URL with players. Each player creates their own character in the same campaign. The DM (you) can:
+- Set the world and NPCs
+- Control narrative pacing
+- Override AI decisions
+- Use the `/api/chat` endpoint for programmatic control
+
+---
+
+## Step 5: Customize Your DM (Advanced)
+
+### Change the DM's personality:
+
+Edit the system prompt in `src/worker.ts`. Search for `DM_SYSTEM_PROMPT` or look in the `/api/chat` handler where messages are built. The first message to the LLM sets the DM's tone.
+
+### Add your own content:
+
+- **Worlds**: Edit `src/game/worlds.ts` or add world templates
+- **NPCs**: Use the campaign API to create persistent NPCs
+- **Homebrew rules**: Modify the dice roller and stat system
+- **Images**: Configure FLUX.1-schnell for scene illustrations (needs SiliconFlow key)
+
+### Connect to fleet events:
+
+DMLog emits events to the fleet orchestrator. To enable:
+```bash
+npx wrangler secret put FLEET_ORCHESTRATOR_URL
+# Value: https://fleet-orchestrator.your-subdomain.workers.dev
+```
+
+---
+
+## Architecture Overview
+
+```
+dmlog-ai/
+├── src/
+│   ├── worker.ts          # Main entry — all routes, HTML, chat handler
+│   ├── lib/
+│   │   ├── model-router.ts # Multi-provider model selection with fallback
+│   │   ├── knowledge-graph.ts # Crystal graph for session memory
+│   │   ├── evaporation-pipeline.ts # Self-evaporation engine
+│   │   ├── confidence-tracker.ts # Model confidence scoring
+│   │   ├── structural-memory.ts # Cross-session pattern memory
+│   │   └── cross-cocapn-bridge.ts # Fleet knowledge transfer
+│   └── game/
+│       ├── emotions.ts    # NPC relationship engine
+│       ├── worlds.ts      # World templates
+│       └── dice.ts        # Dice roller
+├── wrangler.toml          # Cloudflare Workers config
+├── CLAUDE.md              # THIS FILE — onboarding guide
+└── README.md              # Project overview
+```
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| "A disturbance in the arcane weave" | No API keys set. Run Step 2. |
+| `npx wrangler login` fails | Install wrangler first: `npm i -g wrangler` |
+| Deployment succeeds but 404 | Check `wrangler.toml` has correct `main = "src/worker.ts"` |
+| Models return empty | Some models need longer prompts to work. Check `/api/models` for active model. |
+| Rate limited (429) | Free tier limits. Upgrade Cloudflare Workers plan or add cooldown. |
+| Images not generating | Need `SILICONFLOW_API_KEY` for FLUX.1-schnell image generation |
+
+---
+
+## Costs
+
+| Resource | Free Tier | Paid ($5/mo) |
+|---|---|---|
+| Workers requests | 100K/day | 10M/day |
+| KV reads | 100K/day | 10M/day |
+| KV writes | 1K/day | 1M/day |
+| LLM API calls | Pay per model | Pay per model |
+
+**Most DMs will never exceed free Cloudflare tier.** The cost is almost entirely LLM API usage (~$0.30/month).
+
+---
+
+## Getting Help
+
+- **Docs**: https://docs.cocapn.ai
+- **Fleet**: https://the-fleet.casey-digennaro.workers.dev
+- **Issues**: Open a GitHub issue on this repo
+- **Architecture papers**: https://github.com/Lucineer/capitaine/tree/master/docs
+
+---
+
+*DMLog.ai is part of The Fleet — a collection of AI-powered vessels built on the Cocapn platform.*
+
+*Superinstance & Lucineer (DiGennaro et al.)*
