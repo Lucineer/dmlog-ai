@@ -1,0 +1,42 @@
+{
+  "name": "dmlog-ai",
+  "displayName": "DMLog.ai",
+  "version": "1.0.0",
+  "type": "cocapn-vessel",
+  "description": "DMLog.ai",
+  "icon": "\ud83d\udc09",
+  "color": "#c9a23c",
+  "category": "gaming",
+  "capabilities": [
+    "chat",
+    "sessions",
+    "dice",
+    "characters",
+    "npcs"
+  ],
+  "secrets": {
+    "DEEPSEEK_API_KEY": {
+      "required": false,
+      "hint": "https://platform.deepseek.com/api_keys"
+    },
+    "DEEPINFRA_API_KEY": {
+      "required": false,
+      "hint": "https://deepinfra.com/dashboard/keys"
+    },
+    "SILICONFLOW_API_KEY": {
+      "required": false,
+      "hint": "https://cloud.siliconflow.cn"
+    }
+  },
+  "endpoints": {
+    "health": "/health"
+  },
+  "deployment": {
+    "platform": "cloudflare-workers",
+    "minPlan": "free"
+  },
+  "local": {
+    "supported": true,
+    "port": 8787
+  }
+}
