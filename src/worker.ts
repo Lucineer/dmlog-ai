@@ -739,7 +739,7 @@ function buildShareCardHTML(quote: string, characterName: string, scene: string)
   </div>
   <div class="footer"><a href="https://dmlog.ai">Your AI Dungeon Master</a></div>
 </div>
-</body></html>`;
+<div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div></body></html>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -2000,7 +2000,7 @@ a:hover{text-decoration:underline}
   </div>
 </div>
 
-</body></html>`;
+<div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div></body></html>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -2011,7 +2011,7 @@ function serveStatic(filename: string, contentType: string): Response {
   // Placeholder: In production these would come from ASSETS binding or bundled HTML
   const placeholder: Record<string, string> = {
     'index.html': generateDemoHTML(),
-    'app.html': `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DMLog.ai — Game</title><link rel="stylesheet" href="/css/style.css"></head><body><div id="game"></div><script src="/js/app.js"></script></body></html>`,
+    'app.html': `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DMLog.ai — Game</title><link rel="stylesheet" href="/css/style.css"></head><body><div id="game"></div><script src="/js/app.js"></script><div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div></body></html>`,
     'style.css': `/* DMLog.ai Styles */\n* { box-sizing: border-box; margin: 0; padding: 0; }\nbody { font-family: Georgia, 'Times New Roman', serif; background: #1a1a2e; color: #e0e0e0; }\n#app { max-width: 800px; margin: 2rem auto; padding: 2rem; text-align: center; }\nh1 { color: #d4af37; font-size: 2.5rem; margin-bottom: 1rem; }\na { color: #d4af37; }\n`,
     'app.js': `/* DMLog.ai Client */\nconsole.log('DMLog.ai loaded');\n`,
   };
