@@ -4,108 +4,66 @@
 
 <h1 align="center">dmlog-ai</h1>
 
-<p align="center">AI Dungeon Master that remembers every session. Full TTRPG engine with character stats, dice rolling, and campaign management.</p>
+<p align="center">An AI assistant for TTRPG campaigns that retains session context. Handles character tracking, dice rolls, and campaign notes.</p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> ·
   <a href="#features">Features</a> ·
-  <a href="#the-fleet">The Fleet</a> ·
+  <a href="#limitations">Limitations</a> ·
   <a href="https://github.com/Lucineer/dmlog-ai/issues">Issues</a>
 </p>
 
 ---
 
-**Live:** [dmlog-ai](https://dmlog-ai.casey-digennaro.workers.dev) · **Powered by [Capitaine](https://github.com/Lucineer/capitaine) · [Cocapn](https://github.com/Lucineer/cocapn)**
+**Live Example:** [dmlog-ai.casey-digennaro.workers.dev](https://dmlog-ai.casey-digennaro.workers.dev)
 
-The repo IS the agent. dmlog-ai is a cocapn vessel — a self-improving repository that runs on Cloudflare Workers, thinks with LLMs, and coordinates with the fleet through git.
+You run a session. Next week, you can't recall what the bard promised the lighthouse keeper. This tool helps with that. It stores campaign details and session history, so you can pause and resume.
+
+dmlog-ai retains campaign context across sessions by storing notes and history in your own Cloudflare Worker. It handles dice rolls and basic character stat management. It is not a full AI game engine, but a persistent assistant for your table.
+
+### What This Is
+This is an open-source, self-hosted agent you fork and deploy. Your campaign data stays in your Cloudflare account. You can modify the code or stop using it at any time without losing access.
+
+### How It Works
+- You fork this repository and deploy it as a Cloudflare Worker.
+- Campaign state is stored in your Worker's KV storage.
+- The assistant uses your provided LLM API key (like DeepSeek) to generate responses.
+- Dice rolls use a cryptographically secure random function.
+
+---
 
 ## Quick Start
 
 ```bash
-# Fork and deploy
-gh repo fork Lucineer/dmlog-ai --clone
+# Fork this repository first, then clone your fork.
+git clone https://github.com/YOUR_USERNAME/dmlog-ai
 cd dmlog-ai
 npx wrangler login
-echo "your-github-token" | npx wrangler secret put GITHUB_TOKEN
-echo "your-llm-key" | npx wrangler secret put DEEPSEEK_API_KEY
+npx wrangler secret put GITHUB_TOKEN # Your GitHub token
+npx wrangler secret put DEEPSEEK_API_KEY # Or another supported key
 npx wrangler deploy
 ```
 
-That's it. The vessel is alive.
+Visit your deployed Worker URL. Your instance is running.
 
 ## Features
 
-- **BYOK v2** — Zero keys in code. All API keys via Cloudflare Secrets Store.
-- **Multi-model** — DeepSeek, SiliconFlow, DeepInfra, Moonshot, z.ai, local models.
-- **Session memory** — Conversations persist and build context over time.
-- **PII safety** — Automatic detection and dehydration of sensitive data.
-- **Rate limiting** — Guest tokens per IP with configurable limits.
-- **Health checks** — Standard `/health` endpoint on all vessels.
-- **Fleet coordination** — CRP-39 protocol for trust, bonds, and events.
+- **Self-hosted Memory:** Session history and campaign notes are stored in your Cloudflare KV.
+- **Multi-Model Support:** Works with DeepSeek, SiliconFlow, and other OpenAI-compatible endpoints.
+- **Dice Rolling:** Handles standard dice notation (e.g., 1d20+5) with fair randomization.
+- **Basic Rate Limiting:** Configurable request limits per IP for public sharing.
+- **Health Endpoint:** Includes a standard `/health` endpoint for monitoring.
 
-## Architecture
+## Limitations
 
-Single-file Cloudflare Worker. Zero runtime dependencies. Inline HTML serving.
+Campaign memory is stored in Cloudflare KV, which has a 1GB limit per namespace and eventual consistency. For extremely long campaigns with vast logs, you may need to implement archival.
 
-```
-src/
-  worker.ts      # The hull — serves users, runs heartbeats
-lib/
-  byok.ts        # Multi-model routing (BYOK v2)
-  ...
-```
+---
 
-## The Fleet
-
-dmlog-ai is one of 40+ autonomous vessels in the Lucineer fleet. Each vessel is a different domain of one intelligence.
-
-
-<details>
-<summary><strong>⚓ The Fleet</strong></summary>
-
-**Flagship vessels**
-
-- [cocapn.ai](https://github.com/Lucineer/capitaine)
-- [personallog.ai](https://github.com/Lucineer/personallog-ai)
-- [businesslog.ai](https://github.com/Lucineer/businesslog-ai)
-- [studylog.ai](https://github.com/Lucineer/studylog-ai)
-- [makerlog.ai](https://github.com/Lucineer/makerlog-ai)
-- [playerlog.ai](https://github.com/Lucineer/playerlog-ai)
-- [dmlog.ai](https://github.com/Lucineer/dmlog-ai)
-- [reallog.ai](https://github.com/Lucineer/reallog-ai)
-- [deckboss.ai](https://github.com/Lucineer/deckboss-ai)
-
-**Fleet services**
-
-- [Fleet Catalog](https://github.com/Lucineer/capitaine/blob/master/docs/fleet/FLEET.md)
-- [Git Agent (full)](https://github.com/Lucineer/git-agent)
-- [Cocapn Lite (minimal)](https://github.com/Lucineer/cocapn-lite)
-- [Fleet Orchestrator](https://github.com/Lucineer/fleet-orchestrator)
-- [Dead Reckoning Engine](https://github.com/Lucineer/dead-reckoning-engine)
-- [Dream Engine](https://github.com/Lucineer/dream-engine)
-- [Seed UI (5 layers)](https://github.com/Lucineer/seed-ui)
-
-**For power users**
-
-- [Cocapn Lite (tabula rasa)](https://github.com/Lucineer/cocapn-lite)
-- [Cocapn (core platform)](https://github.com/Lucineer/cocapn)
-- [ZeroClaw (framework)](https://github.com/Lucineer/zeroclaw)
-
-[View all 106 repos →](https://github.com/orgs/Lucineer/repositories)
-[Fleet manifest →](https://github.com/Lucineer/capitaine/blob/master/docs/fleet/FLEET.md)
-
-</details>
-
-
-## Philosophy
-
-> The repo is the agent. The agent is the repo. Intelligence crystallizes from fluid (LLM calls) to solid (code). The vessel becomes faster and cheaper as it becomes smarter.
-
-- **Fork-first** — Power users fork and customize. Casual users visit the domain.
-- **Pay-for-convenience** — We save you costs through bulk inference, not markups.
-- **Git as coordination** — Agents compete via PRs, not chat.
-- **Soft actualization** — Vessels evolve gently based on usage, not hard updates.
-
-## License
-
-MIT · Superinstance & Lucineer (DiGennaro et al.)
+<div align="center">
+  <p>
+    <a href="https://the-fleet.casey-digennaro.workers.dev">The Fleet</a> ·
+    <a href="https://cocapn.ai">Cocapn.ai</a>
+  </p>
+  <p>Attribution: Superinstance & Lucineer (DiGennaro et al.). MIT Licensed.</p>
+</div>
