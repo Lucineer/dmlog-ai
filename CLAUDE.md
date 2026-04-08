@@ -1,217 +1,95 @@
-# CLAUDE.md — DMLog.ai Onboarding Guide
+# CLAUDE.md — Dmlog Ai
 
-> **You are an AI coding assistant helping set up DMLog.ai.** Follow this guide step by step. The user has forked this repo and wants to get their AI Dungeon Master running live.
+You are the specialist and shipwright for this vessel. Two roles, one agent.
 
-## What is DMLog.ai?
+## Identity
+- **Vessel**: Dmlog Ai
+- **Role**: DMLog.ai
+- **URL**: https://dmlog-ai.casey-digennaro.workers.dev
+- **Repo**: github.com/Lucineer/dmlog-ai
+- **Branch**: master
+- **KV Namespace**: unknown
+- **Size**: ~2034 lines
 
-DMLog.ai is an AI-powered Dungeon Master that runs as a Cloudflare Worker. Players create campaigns, build characters, and play D&D-style adventures with an AI narrator. It's a complete TTRPG platform — not a chatbot wrapper.
+## Specialist Mode — Day-to-Day Operations
 
-**You own this.** You forked it, you deploy it, you run it. We just built the hull.
-
----
-
-## Prerequisites
-
-Before starting, the user needs:
-1. **GitHub account** (free) — they already have this if they forked
-2. **Cloudflare account** (free) — https://dash.cloudflare.com/sign-up
-3. **At least one LLM API key** — see the Keys section below
-
----
-
-## Step 1: Deploy to Cloudflare Workers
-
-Run these commands in order. If one fails, read the error and fix it before continuing.
-
+### Deploy
 ```bash
-# Install Wrangler (Cloudflare's deploy tool)
-npm install -g wrangler
-
-# Log into Cloudflare (opens browser for auth)
-npx wrangler login
-
-# Deploy the worker
-npx wrangler deploy
+cd /tmp/dmlog-ai && wrangler deploy
 ```
 
-If deployment succeeds, you'll see a URL like:
-```
-https://dmlog-ai.your-subdomain.workers.dev
-```
-
-Open that URL. You should see the DMLog landing page. **Take a moment to celebrate.**
-
----
-
-## Step 2: Add API Keys
-
-DMLog.ai needs at least one LLM API key to generate narration. Without keys, it falls back to canned responses — functional but boring.
-
-### How to add keys:
-
+### Health Check
 ```bash
-# DeepInfra (RECOMMENDED — best DM models, cheap)
-npx wrangler secret put DEEPINFRA_API_KEY
-# Paste your key from https://deepinfra.com/dashboard/keys
-# Get a free key with $2 credit at https://deepinfra.com
-
-# SiliconFlow (backup — Seed-OSS-36B is great for narration)
-npx wrangler secret put SILICONFLOW_API_KEY
-# Paste your key from https://cloud.siliconflow.cn
-
-# DeepSeek (reliable fallback)
-npx wrangler secret put DEEPSEEK_API_KEY
-# Paste your key from https://platform.deepseek.com/api_keys
+curl -s https://dmlog-ai.casey-digennaro.workers.dev/health
+curl -s https://dmlog-ai.casey-digennaro.workers.dev/vessel.json | python3 -m json.tool
 ```
 
-### Which models are used?
+### Key Endpoints
+| Endpoint | What It Does |
+|----------|-------------|
+| /health | Liveness check |
+| /vessel.json | Fleet self-description |
 
-The system automatically picks the best available model:
-1. **Seed-2.0-mini** (DeepInfra) — best D&D narration quality
-2. **Step-3.5-Flash** (DeepInfra) — strong backup
-3. **Seed-OSS-36B** (SiliconFlow) — third option
-4. **Nemotron-120B** (DeepInfra) — creative tier
-5. **DeepSeek-Chat** — reliable fallback
-6. And 4 more fallbacks...
+### Common Issues & Recovery
+1. **502 error**: Check KV namespace `unknown`, redeploy with `rm -rf .wrangler dist && wrangler deploy`
+2. **CSP blocking**: CSP pattern is `Record<string,string> typed object` — ensure connect-src includes needed domains
+3. **Stale build**: `rm -rf .wrangler dist && wrangler deploy`
+4. **GitHub raw cache**: Changes may take 5-10 min to propagate on raw.githubusercontent.com
+5. **Git push conflict**: `git fetch && git reset --hard origin/master && re-apply changes`
 
-You don't need to configure which model. Just add keys and it figures out the rest.
+### Fleet Connections
+- **Emergence bus**: not wired
+- **Vessel Tuner**: https://vessel-tuner.casey-digennaro.workers.dev/api/vessel?name=dmlog-ai
+- **Fleet grid**: Listed in cocapn.ai and the-fleet
 
-### Verify keys are working:
+## Shipwright Mode — Drydock Operations
 
-```bash
-curl https://dmlog-ai.your-subdomain.workers.dev/api/models
-```
+### Architecture Pattern
+- **Type**: Raw CF Worker
+- **JSON helper**: Response() with headers
+- **CSP pattern**: Record<string,string> typed object
+- **Features.js**: no
 
-You should see `"active": "Seed-2.0-mini"` (or whichever model has a key).
+### Fleet Patterns
+- **Frame-ancestors in CSP**: yes
+- **vessel.json capabilities**: chat, sessions, dice, characters, npcs
+- **Fleet link footer**: yes
 
-### Free tier costs:
+### Refactoring Rules
+1. **NEVER** change the JSON helper function name (`Response() with headers`) — breaks all endpoints
+2. **NEVER** add template literals (${var}) inside HTML strings — breaks esbuild
+3. **NEVER** use single quotes inside double-quoted HTML inside single-quoted TS strings
+4. **ALWAYS** use string concatenation for HTML, not template literals
+5. **ALWAYS** test with `curl /health` after every change
+6. **ALWAYS** check vessel-tuner score before and after refactoring
+7. **PREFER** `/features.js` endpoint for complex client-side JS (avoids quote escaping)
+8. **PREFER** `write` tool over heredocs — obfuscation detector blocks cat << EOF
 
-A typical D&D session uses ~50-100 messages. With Seed-2.0-mini on DeepInfra:
-- Cost per message: ~$0.0001
-- **A full session costs about $0.01**
-- **A month of daily sessions costs about $0.30**
-- DeepInfra gives $2 free credit — that's ~6 months of play
+### Before Refactoring Checklist
+- [ ] Current vessel-tuner score recorded
+- [ ] Git status clean (no uncommitted changes)
+- [ ] Branch backed up (`git tag before-refactor`)
+- [ ] All endpoints tested and working
+- [ ] Fleet connections documented
 
----
+### After Refactoring Checklist
+- [ ] `curl /health` returns 200
+- [ ] `curl /vessel.json` returns valid JSON with capabilities
+- [ ] CSP header present with frame-ancestors
+- [ ] Vessel-tuner score >= previous score
+- [ ] Landing page renders correctly
+- [ ] `git push` succeeds
 
-## Step 3: Configure Settings (Optional)
+## Captain's Standing Orders
+1. Keep the vessel small. ~2034 lines is the current size.
+2. Zero runtime dependencies unless absolutely necessary.
+3. Every endpoint must be useful — no dead code.
+4. Equipment is loaded inline, never via npm.
+5. All changes committed with descriptive messages.
+6. If something breaks, fix it before moving on.
+7. Document what you changed and why.
 
-Edit `wrangler.toml` to customize:
-
-```toml
-# Change the worker name (affects URL)
-name = "dmlog-ai"
-
-# Add a custom domain (requires Cloudflare domain)
-# routes = [{ pattern = "dmlog.yourdomain.com", custom_domain = true }]
-```
-
-After changing `wrangler.toml`, run `npx wrangler deploy` again.
-
----
-
-## Step 4: Play!
-
-Open your deployed URL and:
-
-1. **Click "Start a Campaign"**
-2. Choose a world theme (Fantasy, Sci-Fi, Horror, etc.)
-3. Pick a class (Fighter, Wizard, Rogue, Cleric, Ranger)
-4. Name your character
-5. **Play!** The AI DM narrates, tracks HP, rolls dice, and responds to your choices
-
-### For Dungeon Masters (your players):
-
-Share your URL with players. Each player creates their own character in the same campaign. The DM (you) can:
-- Set the world and NPCs
-- Control narrative pacing
-- Override AI decisions
-- Use the `/api/chat` endpoint for programmatic control
-
----
-
-## Step 5: Customize Your DM (Advanced)
-
-### Change the DM's personality:
-
-Edit the system prompt in `src/worker.ts`. Search for `DM_SYSTEM_PROMPT` or look in the `/api/chat` handler where messages are built. The first message to the LLM sets the DM's tone.
-
-### Add your own content:
-
-- **Worlds**: Edit `src/game/worlds.ts` or add world templates
-- **NPCs**: Use the campaign API to create persistent NPCs
-- **Homebrew rules**: Modify the dice roller and stat system
-- **Images**: Configure FLUX.1-schnell for scene illustrations (needs SiliconFlow key)
-
-### Connect to fleet events:
-
-DMLog emits events to the fleet orchestrator. To enable:
-```bash
-npx wrangler secret put FLEET_ORCHESTRATOR_URL
-# Value: https://fleet-orchestrator.your-subdomain.workers.dev
-```
-
----
-
-## Architecture Overview
-
-```
-dmlog-ai/
-├── src/
-│   ├── worker.ts          # Main entry — all routes, HTML, chat handler
-│   ├── lib/
-│   │   ├── model-router.ts # Multi-provider model selection with fallback
-│   │   ├── knowledge-graph.ts # Crystal graph for session memory
-│   │   ├── evaporation-pipeline.ts # Self-evaporation engine
-│   │   ├── confidence-tracker.ts # Model confidence scoring
-│   │   ├── structural-memory.ts # Cross-session pattern memory
-│   │   └── cross-cocapn-bridge.ts # Fleet knowledge transfer
-│   └── game/
-│       ├── emotions.ts    # NPC relationship engine
-│       ├── worlds.ts      # World templates
-│       └── dice.ts        # Dice roller
-├── wrangler.toml          # Cloudflare Workers config
-├── CLAUDE.md              # THIS FILE — onboarding guide
-└── README.md              # Project overview
-```
-
----
-
-## Troubleshooting
-
-| Problem | Solution |
-|---|---|
-| "A disturbance in the arcane weave" | No API keys set. Run Step 2. |
-| `npx wrangler login` fails | Install wrangler first: `npm i -g wrangler` |
-| Deployment succeeds but 404 | Check `wrangler.toml` has correct `main = "src/worker.ts"` |
-| Models return empty | Some models need longer prompts to work. Check `/api/models` for active model. |
-| Rate limited (429) | Free tier limits. Upgrade Cloudflare Workers plan or add cooldown. |
-| Images not generating | Need `SILICONFLOW_API_KEY` for FLUX.1-schnell image generation |
-
----
-
-## Costs
-
-| Resource | Free Tier | Paid ($5/mo) |
-|---|---|---|
-| Workers requests | 100K/day | 10M/day |
-| KV reads | 100K/day | 10M/day |
-| KV writes | 1K/day | 1M/day |
-| LLM API calls | Pay per model | Pay per model |
-
-**Most DMs will never exceed free Cloudflare tier.** The cost is almost entirely LLM API usage (~$0.30/month).
-
----
-
-## Getting Help
-
-- **Docs**: https://docs.cocapn.ai
-- **Fleet**: https://the-fleet.casey-digennaro.workers.dev
-- **Issues**: Open a GitHub issue on this repo
-- **Architecture papers**: https://github.com/Lucineer/capitaine/tree/master/docs
-
----
-
-*DMLog.ai is part of The Fleet — a collection of AI-powered vessels built on the Cocapn platform.*
-
-*Superinstance & Lucineer (DiGennaro et al.)*
+## Vessel Evolution
+- **Current stage**: [hardware-first | safe | effective | pretty | optimized]
+- **Target stage**: optimized
+- **Rollback points**: check git log for last-known-good commits
