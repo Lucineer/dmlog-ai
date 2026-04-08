@@ -740,7 +740,19 @@ function buildShareCardHTML(quote: string, characterName: string, scene: string)
   </div>
   <div class="footer"><a href="https://dmlog.ai">Your AI Dungeon Master</a></div>
 </div>
-<div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div></body></html>`;
+<div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div>
+    <div style="max-width:700px;margin:2rem auto;padding:1.5rem;background:rgba(255,255,255,0.05);border-radius:12px;text-align:center">
+      <p style="margin:0 0 0.5rem;font-size:0.8rem;color:#888">Part of the Lucineer Ecosystem</p>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;font-size:0.75rem">
+        <a href="https://github.com/Lucineer/cocapn-ai" style="color:#60a5fa;text-decoration:none">cocapn.ai</a>
+        <a href="https://github.com/Lucineer/deckboss" style="color:#60a5fa;text-decoration:none">deckboss.ai</a>
+        <a href="https://github.com/Lucineer/deckboss-hardware" style="color:#60a5fa;text-decoration:none">deckboss.net</a>
+        <a href="https://github.com/Lucineer/capitaine-ai" style="color:#60a5fa;text-decoration:none">capitaine.ai</a>
+        <a href="https://github.com/Lucineer/the-fleet" style="color:#60a5fa;text-decoration:none">the-fleet</a>
+      </div>
+      <p style="margin:0.5rem 0 0;font-size:0.65rem;color:#666">Built by Superinstance &amp; Lucineer (DiGennaro et al.)</p>
+    </div>
+</body></html>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -2001,7 +2013,19 @@ a:hover{text-decoration:underline}
   </div>
 </div>
 
-<div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div></body></html>`;
+<div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div>
+    <div style="max-width:700px;margin:2rem auto;padding:1.5rem;background:rgba(255,255,255,0.05);border-radius:12px;text-align:center">
+      <p style="margin:0 0 0.5rem;font-size:0.8rem;color:#888">Part of the Lucineer Ecosystem</p>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;font-size:0.75rem">
+        <a href="https://github.com/Lucineer/cocapn-ai" style="color:#60a5fa;text-decoration:none">cocapn.ai</a>
+        <a href="https://github.com/Lucineer/deckboss" style="color:#60a5fa;text-decoration:none">deckboss.ai</a>
+        <a href="https://github.com/Lucineer/deckboss-hardware" style="color:#60a5fa;text-decoration:none">deckboss.net</a>
+        <a href="https://github.com/Lucineer/capitaine-ai" style="color:#60a5fa;text-decoration:none">capitaine.ai</a>
+        <a href="https://github.com/Lucineer/the-fleet" style="color:#60a5fa;text-decoration:none">the-fleet</a>
+      </div>
+      <p style="margin:0.5rem 0 0;font-size:0.65rem;color:#666">Built by Superinstance &amp; Lucineer (DiGennaro et al.)</p>
+    </div>
+</body></html>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -2012,7 +2036,19 @@ function serveStatic(filename: string, contentType: string): Response {
   // Placeholder: In production these would come from ASSETS binding or bundled HTML
   const placeholder: Record<string, string> = {
     'index.html': generateDemoHTML(),
-    'app.html': `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DMLog.ai — Game</title><link rel="stylesheet" href="/css/style.css"></head><body><div id="game"></div><script src="/js/app.js"></script><div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div></body></html>`,
+    'app.html': `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DMLog.ai — Game</title><link rel="stylesheet" href="/css/style.css"></head><body><div id="game"></div><script src="/js/app.js"></script><div style="text-align:center;padding:24px;color:#475569;font-size:.75rem"><a href="https://the-fleet.casey-digennaro.workers.dev" style="color:#64748b">⚓ The Fleet</a> · <a href="https://cocapn.ai" style="color:#64748b">Cocapn</a></div>
+    <div style="max-width:700px;margin:2rem auto;padding:1.5rem;background:rgba(255,255,255,0.05);border-radius:12px;text-align:center">
+      <p style="margin:0 0 0.5rem;font-size:0.8rem;color:#888">Part of the Lucineer Ecosystem</p>
+      <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0.5rem;font-size:0.75rem">
+        <a href="https://github.com/Lucineer/cocapn-ai" style="color:#60a5fa;text-decoration:none">cocapn.ai</a>
+        <a href="https://github.com/Lucineer/deckboss" style="color:#60a5fa;text-decoration:none">deckboss.ai</a>
+        <a href="https://github.com/Lucineer/deckboss-hardware" style="color:#60a5fa;text-decoration:none">deckboss.net</a>
+        <a href="https://github.com/Lucineer/capitaine-ai" style="color:#60a5fa;text-decoration:none">capitaine.ai</a>
+        <a href="https://github.com/Lucineer/the-fleet" style="color:#60a5fa;text-decoration:none">the-fleet</a>
+      </div>
+      <p style="margin:0.5rem 0 0;font-size:0.65rem;color:#666">Built by Superinstance &amp; Lucineer (DiGennaro et al.)</p>
+    </div>
+</body></html>`,
     'style.css': `/* DMLog.ai Styles */\n* { box-sizing: border-box; margin: 0; padding: 0; }\nbody { font-family: Georgia, 'Times New Roman', serif; background: #1a1a2e; color: #e0e0e0; }\n#app { max-width: 800px; margin: 2rem auto; padding: 2rem; text-align: center; }\nh1 { color: #d4af37; font-size: 2.5rem; margin-bottom: 1rem; }\na { color: #d4af37; }\n`,
     'app.js': `/* DMLog.ai Client */\nconsole.log('DMLog.ai loaded');\n`,
   };
